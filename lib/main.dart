@@ -1,4 +1,6 @@
 import 'package:flutter/material.dart';
+import 'vehiculos_transporte/main.dart';
+import 'eventos_entretenimiento/main.dart';
 
 void main() {
   runApp(MiApp());
@@ -36,26 +38,13 @@ class InicioPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: Colors.white,
 
-      // 🔷 APP BAR (zona superior con barra de búsqueda)
-      appBar: AppBar(
-        backgroundColor: Colors.blue[800],
-        elevation: 0,
-        title: TextField(
-          decoration: InputDecoration(
-            hintText: 'Buscar aquí', // 🔍 Búsqueda
-            hintStyle: TextStyle(color: Colors.white70),
-            prefixIcon: Icon(Icons.search, color: Colors.white),
-            border: InputBorder.none,
-          ),
-          style: TextStyle(color: Colors.white),
-        ),
-      ),
+      // 🔷 APP BAR (extraído)
+      appBar: Header(),
 
       // 🔶 CUERPO PRINCIPAL DE LA PANTALLA
       body: SingleChildScrollView(
         child: Column(
           children: [
-
             // 🟪 Bienvenida y foto de perfil
             Container(
               color: Colors.blue[800],
@@ -63,14 +52,18 @@ class InicioPage extends StatelessWidget {
               child: Row(
                 children: [
                   CircleAvatar(
-                    backgroundImage: AssetImage('assets/perfil.png'), // 📷 Tu imagen de perfil
+                    backgroundImage: AssetImage(
+                        'assets/perfil.png'), // 📷 Tu imagen de perfil
                   ),
                   SizedBox(width: 10),
                   Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text('Bienvenido', style: TextStyle(color: Colors.white, fontSize: 16)),
-                      Text('Gran B', style: TextStyle(color: Colors.white70, fontSize: 12)),
+                      Text('Bienvenido',
+                          style: TextStyle(color: Colors.white, fontSize: 16)),
+                      Text('Gran B',
+                          style:
+                              TextStyle(color: Colors.white70, fontSize: 12)),
                     ],
                   ),
                 ],
@@ -94,9 +87,23 @@ class InicioPage extends StatelessWidget {
                   // 🔘 CADA BOTÓN DE SERVICIO
                   return InkWell(
                     onTap: () {
-                      // 🔁 Aquí va la navegación al presionar un servicio
-                      print('${categorias[index]['label']} presionado');
-                      // Navigator.push(context, MaterialPageRoute(builder: (_) => OtraPantalla()));
+                      if (categorias[index]['label'] == 'Vehículos') {
+                        // Redirige a la pantalla Vehiculos_Transporte/main.dart
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => VehiculosTransportePage()),
+                        );
+                      } else if (categorias[index]['label'] == 'Eventos') {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) =>
+                                  EventosEntretenimientoPage()),
+                        );
+                      } else {
+                        print('${categorias[index]['label']} presionado');
+                      }
                     },
                     borderRadius: BorderRadius.circular(50),
                     child: Column(
@@ -126,19 +133,54 @@ class InicioPage extends StatelessWidget {
         ),
       ),
 
-      // 🟦 MENÚ DE NAVEGACIÓN INFERIOR
-      bottomNavigationBar: BottomNavigationBar(
-        backgroundColor: Colors.blue[800],
-        selectedItemColor: const Color.fromARGB(255, 111, 134, 160),
-        unselectedItemColor: const Color.fromARGB(179, 158, 94, 94),
-        items: [
-          BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Inicio'), // 🏠 Inicio
-          BottomNavigationBarItem(icon: Icon(Icons.explore), label: 'Explore'), // 🧭 Explorar
-          BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Buscar'), // 🔍 Buscar
-          BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Perfil'), // 👤 Perfil
-        ],
-      ),
+      // 🟦 MENÚ DE NAVEGACIÓN INFERIOR (extraído)
+      bottomNavigationBar: Footer(),
     );
   }
 }
-// Fin del código
+
+// Encabezado extraído
+class Header extends StatelessWidget implements PreferredSizeWidget {
+  @override
+  Widget build(BuildContext context) {
+    return AppBar(
+      backgroundColor: Colors.blue[800],
+      elevation: 0,
+      title: TextField(
+        decoration: InputDecoration(
+          hintText: 'Buscar aquí', // 🔍 Búsqueda
+          hintStyle: TextStyle(color: Colors.white70),
+          prefixIcon: Icon(Icons.search, color: Colors.white),
+          border: InputBorder.none,
+        ),
+        style: TextStyle(color: Colors.white),
+      ),
+    );
+  }
+
+  @override
+  Size get preferredSize =>
+      Size.fromHeight(kToolbarHeight); // Altura del AppBar
+}
+
+// Pie de página extraído
+class Footer extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return BottomNavigationBar(
+      backgroundColor: Colors.blue[800],
+      selectedItemColor: const Color.fromARGB(255, 111, 134, 160),
+      unselectedItemColor: const Color.fromARGB(179, 158, 94, 94),
+      items: [
+        BottomNavigationBarItem(
+            icon: Icon(Icons.home), label: 'Inicio'), // 🏠 Inicio
+        BottomNavigationBarItem(
+            icon: Icon(Icons.explore), label: 'Explore'), // 🧭 Explorar
+        BottomNavigationBarItem(
+            icon: Icon(Icons.search), label: 'Buscar'), // 🔍 Buscar
+        BottomNavigationBarItem(
+            icon: Icon(Icons.person), label: 'Perfil'), // 👤 Perfil
+      ],
+    );
+  }
+}
