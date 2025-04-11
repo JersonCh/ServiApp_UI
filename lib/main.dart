@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'vehiculos_transporte/main.dart';
 import 'eventos_entretenimiento/main.dart';
-import 'belleza_estetica/main.dart';
-import 'salud_bienestar/main.dart';
 
 void main() {
   runApp(MiApp());
@@ -102,18 +100,6 @@ class InicioPage extends StatelessWidget {
                           MaterialPageRoute(
                               builder: (context) =>
                                   EventosEntretenimientoPage()),
-                        );
-                      } else if (categorias[index]['label'] == 'Estética') {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => BellezaEsteticaPage()),
-                        );
-                      } else if (categorias[index]['label'] == 'Salud y Bienestar') {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                              builder: (context) => SaludBienestarPage()),
                         );
                       } else {
                         print('${categorias[index]['label']} presionado');
