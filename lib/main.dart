@@ -3,6 +3,7 @@ import 'vehiculos_transporte/main.dart';
 import 'eventos_entretenimiento/main.dart';
 import 'belleza_estetica/main.dart';
 import 'salud_bienestar/main.dart';
+import 'Tecnologiaelectronica/main.dart';
 
 void main() {
   runApp(MiApp());
@@ -25,7 +26,7 @@ class MiApp extends StatelessWidget {
 class InicioPage extends StatelessWidget {
   // 🔹 Lista de categorías de servicios con íconos y etiquetas
   final List<Map<String, dynamic>> categorias = [
-    {'icon': Icons.memory, 'label': 'Tecnología'},
+    {'icon': Icons.memory, 'label': 'Tecnologia'},
     {'icon': Icons.directions_car, 'label': 'Vehículos'},
     {'icon': Icons.cleaning_services, 'label': 'Limpieza'},
     {'icon': Icons.health_and_safety, 'label': 'Salud y Bienestar'},
@@ -89,7 +90,15 @@ class InicioPage extends StatelessWidget {
                   // 🔘 CADA BOTÓN DE SERVICIO
                   return InkWell(
                     onTap: () {
-                      if (categorias[index]['label'] == 'Vehículos') {
+                      if (categorias[index]['label'] == 'Tecnologia') {
+                        // Redirige a la pantalla  Tecnologiaelectronica/main.dart
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => TecnologiayElectronicaPage()),
+                        );
+                      } 
+                      else if (categorias[index]['label'] == 'Vehículos') {
                         // Redirige a la pantalla Vehiculos_Transporte/main.dart
                         Navigator.push(
                           context,
@@ -185,15 +194,21 @@ class Footer extends StatelessWidget {
       backgroundColor: Colors.blue[800],
       selectedItemColor: const Color.fromARGB(255, 111, 134, 160),
       unselectedItemColor: const Color.fromARGB(179, 158, 94, 94),
-      items: [
-        BottomNavigationBarItem(
-            icon: Icon(Icons.home), label: 'Inicio'), // 🏠 Inicio
-        BottomNavigationBarItem(
-            icon: Icon(Icons.explore), label: 'Explore'), // 🧭 Explorar
-        BottomNavigationBarItem(
-            icon: Icon(Icons.search), label: 'Buscar'), // 🔍 Buscar
-        BottomNavigationBarItem(
-            icon: Icon(Icons.person), label: 'Perfil'), // 👤 Perfil
+      onTap: (index) {
+        if (index == 0) {
+          // Ir siempre a InicioPage y eliminar rutas anteriores
+          Navigator.pushAndRemoveUntil(
+            context,
+            MaterialPageRoute(builder: (context) => InicioPage()),
+            (route) => false,
+          );
+        }
+      },
+      items: const [
+        BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Inicio'),
+        BottomNavigationBarItem(icon: Icon(Icons.explore), label: 'Explorar'),
+        BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Buscar'),
+        BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Perfil'),
       ],
     );
   }
