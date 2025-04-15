@@ -4,6 +4,8 @@ import 'eventos_entretenimiento/main.dart';
 import 'belleza_estetica/main.dart';
 import 'salud_bienestar/main.dart';
 import 'Tecnologiaelectronica/main.dart';
+import 'servicios_generales/main.dart';
+import 'limpieza_mantenimiento/main.dart';
 
 void main() {
   runApp(MiApp());
@@ -95,10 +97,10 @@ class InicioPage extends StatelessWidget {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
-                              builder: (context) => TecnologiayElectronicaPage()),
+                              builder: (context) =>
+                                  TecnologiayElectronicaPage()),
                         );
-                      } 
-                      else if (categorias[index]['label'] == 'Vehículos') {
+                      } else if (categorias[index]['label'] == 'Vehículos') {
                         // Redirige a la pantalla Vehiculos_Transporte/main.dart
                         Navigator.push(
                           context,
@@ -118,11 +120,28 @@ class InicioPage extends StatelessWidget {
                           MaterialPageRoute(
                               builder: (context) => BellezaEsteticaPage()),
                         );
-                      } else if (categorias[index]['label'] == 'Salud y Bienestar') {
+                      } else if (categorias[index]['label'] ==
+                          'Salud y Bienestar') {
                         Navigator.push(
                           context,
                           MaterialPageRoute(
                               builder: (context) => SaludBienestarPage()),
+                        );
+                      } else if (categorias[index]['label'] ==
+                          'Servicios Generales') {
+                        // Redirige a la pantalla Servicios_Generales/main.dart
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) => ServiciosGeneralesPage()),
+                        );
+                      } else if (categorias[index]['label'] == 'Limpieza') {
+                        // Redirige a la pantalla Limpieza_Mantenimiento/main.dart
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                              builder: (context) =>
+                                  LimpiezaMantenimientoPage()),
                         );
                       } else {
                         print('${categorias[index]['label']} presionado');
