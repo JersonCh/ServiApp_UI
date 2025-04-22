@@ -1,0 +1,2 @@
+D:/Biblioteca/Documentos/Laboratorios Chelard/ServiApp_UI - copia - copia/android/app/.cxx/Debug/2l84fl3e/armeabi-v7a/CMakeFiles/edit_cache.dir
+D:/Biblioteca/Documentos/Laboratorios Chelard/ServiApp_UI - copia - copia/android/app/.cxx/Debug/2l84fl3e/armeabi-v7a/CMakeFiles/rebuild_cache.dir

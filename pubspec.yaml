@@ -1,6 +1,6 @@
 name: serviapp
 description: "A new Flutter project."
-publish_to: 'none'
+publish_to: 'none' # No se publicará en pub.dev
 version: 0.1.0
 
 environment:
@@ -9,6 +9,7 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  web_socket_channel: ^2.4.0 # 👈 Dependencia WebSocket
 
 dev_dependencies:
   flutter_test:
@@ -18,4 +19,4 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/perfil.png
+  - assets/perfil.png

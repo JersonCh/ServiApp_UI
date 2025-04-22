@@ -38,27 +38,27 @@ class SaludBienestarPage extends StatelessWidget {
                   _buildServiceCard(
                     context,
                     'Consulta médica a domicilio',
-                    'https://medicatelcolombia.com/wp-content/uploads/2017/05/medico-a-domicilio-mediatel.jpg',
+                    'https://i.ibb.co/6ct0vHTg/9.jpg',
                   ),
                   _buildServiceCard(
                     context,
                     'Enfermería y cuidados a domicilio',
-                    'https://www.serdomas.es/img/s3/cms/cuidadores-a-domicilio-serdomas.jpeg',
+                    'https://i.ibb.co/Q36rJ2gC/10.jpg',
                   ),
                   _buildServiceCard(
                     context,
                     'Terapia física y rehabilitación',
-                    'https://fisiostar.com/wp-content/uploads/2020/09/fisioterapia-a-domicilio-madrid-1024x683.jpg',
+                    'https://i.ibb.co/HD8yyTJH/11.jpg',
                   ),
                   _buildServiceCard(
                     context,
                     'Masajes y relajación',
-                    'https://masajesadan.com/wp-content/uploads/2018/03/Masaje-relajante-a-domicilio-en-Madrid.jpg',
+                    'https://i.ibb.co/LhxnF3qN/14.jpg',
                   ),
                   _buildServiceCard(
                     context,
                     'Entrenador personal',
-                    'https://staticpigmalion.persialink.ir/mueveteencasa/wp-content/uploads/2021/01/entrenador-personal-a-domicilio-mallorca.jpg',
+                    'https://i.ibb.co/GQYYZmrZ/13.jpg',
                   ),
                 ],
               ),
@@ -124,15 +124,15 @@ class Header extends StatelessWidget implements PreferredSizeWidget {
     return AppBar(
       backgroundColor: Colors.blue[800],
       elevation: 0,
-      title: TextField(
-        decoration: InputDecoration(
-          hintText: 'Buscar aquí',
-          hintStyle: TextStyle(color: const Color.fromARGB(179, 250, 250, 250)),
-          prefixIcon: Icon(Icons.search, color: Colors.white),
-          border: InputBorder.none,
-        ),
-        style: TextStyle(color: Colors.white),
-      ),
+      // title: TextField(
+      //   decoration: InputDecoration(
+      //     hintText: 'Buscar aquí',
+      //     hintStyle: TextStyle(color: const Color.fromARGB(179, 250, 250, 250)),
+      //     prefixIcon: Icon(Icons.search, color: Colors.white),
+      //     border: InputBorder.none,
+      //   ),
+      //   style: TextStyle(color: Colors.white),
+      // ),
     );
   }
 

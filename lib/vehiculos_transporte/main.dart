@@ -129,15 +129,15 @@ class Header extends StatelessWidget implements PreferredSizeWidget {
     return AppBar(
       backgroundColor: Colors.blue[800],
       elevation: 0,
-      title: TextField(
-        decoration: InputDecoration(
-          hintText: 'Buscar aquí',
-          hintStyle: TextStyle(color: const Color.fromARGB(179, 250, 250, 250)),
-          prefixIcon: Icon(Icons.search, color: Colors.white),
-          border: InputBorder.none,
-        ),
-        style: TextStyle(color: Colors.white),
-      ),
+      // title: TextField(
+      //   decoration: InputDecoration(
+      //     hintText: 'Buscar aquí',
+      //     hintStyle: TextStyle(color: const Color.fromARGB(179, 250, 250, 250)),
+      //     prefixIcon: Icon(Icons.search, color: Colors.white),
+      //     border: InputBorder.none,
+      //   ),
+      //   style: TextStyle(color: Colors.white),
+      // ),
     );
   }
 

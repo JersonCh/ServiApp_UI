@@ -38,17 +38,17 @@ class BellezaEsteticaPage extends StatelessWidget {
                   _buildServiceCard(
                     context,
                     'Peluquería y barbería a domicilio',
-                    'https://www.salontrendsmx.com/wp-content/uploads/2016/12/peluqueria-a-domicilio.jpg',
+                    'https://i.ibb.co/Q36CYSHt/6.jpg',
                   ),
                   _buildServiceCard(
                     context,
                     'Manicure y pedicure',
-                    'https://static.wixstatic.com/media/2c7a0c_a7b3059ed3fb441ea3697a4a2548b3ff~mv2.jpg',
+                    'https://i.ibb.co/jZhfZ3FN/7.jpg',
                   ),
                   _buildServiceCard(
                     context,
                     'Maquillaje y asesoría de imagen',
-                    'https://cdn0.bodas.com.mx/vendor/1420/3_2/960/jpg/pexels-photo-457701_5_141420.jpeg',
+                    'https://i.ibb.co/MKLykQ4/8.jpg',
                   ),
                 ],
               ),
@@ -114,15 +114,15 @@ class Header extends StatelessWidget implements PreferredSizeWidget {
     return AppBar(
       backgroundColor: Colors.blue[800],
       elevation: 0,
-      title: TextField(
-        decoration: InputDecoration(
-          hintText: 'Buscar aquí',
-          hintStyle: TextStyle(color: const Color.fromARGB(179, 250, 250, 250)),
-          prefixIcon: Icon(Icons.search, color: Colors.white),
-          border: InputBorder.none,
-        ),
-        style: TextStyle(color: Colors.white),
-      ),
+      // title: TextField(
+      //   decoration: InputDecoration(
+      //     hintText: 'Buscar aquí',
+      //     hintStyle: TextStyle(color: const Color.fromARGB(179, 250, 250, 250)),
+      //     prefixIcon: Icon(Icons.search, color: Colors.white),
+      //     border: InputBorder.none,
+      //   ),
+      //   style: TextStyle(color: Colors.white),
+      // ),
     );
   }
 

@@ -131,15 +131,15 @@ class Header extends StatelessWidget implements PreferredSizeWidget {
     return AppBar(
       backgroundColor: Colors.blue[800],
       elevation: 0,
-      title: TextField(
-        decoration: InputDecoration(
-          hintText: 'Buscar aquí',
-          hintStyle: TextStyle(color: const Color.fromARGB(179, 250, 250, 250)),
-          prefixIcon: Icon(Icons.search, color: Colors.white),
-          border: InputBorder.none,
-        ),
-        style: TextStyle(color: Colors.white),
-      ),
+      // title: TextField(
+      //   decoration: InputDecoration(
+      //     hintText: 'Buscar aquí',
+      //     hintStyle: TextStyle(color: const Color.fromARGB(179, 250, 250, 250)),
+      //     prefixIcon: Icon(Icons.search, color: Colors.white),
+      //     border: InputBorder.none,
+      //   ),
+      //   style: TextStyle(color: Colors.white),
+      // ),
     );
   }
 
@@ -156,14 +156,14 @@ class Footer extends StatelessWidget {
       selectedItemColor: const Color.fromARGB(255, 111, 134, 160),
       unselectedItemColor: const Color.fromARGB(179, 158, 94, 94),
       onTap: (index) {
-        if (index == 0) {
-          // Ir siempre a InicioPage y eliminar rutas anteriores
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(builder: (context) => InicioPage()),
-            (route) => false,
-          );
-        }
+        // if (index == 0) {
+        //   // Ir siempre a InicioPage y eliminar rutas anteriores
+        //   Navigator.pushAndRemoveUntil(
+        //     context,
+        //     MaterialPageRoute(builder: (context) => InicioPage()),
+        //     (route) => false,
+        //   );
+        // }
       },
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Inicio'),
