@@ -10,6 +10,7 @@ dependencies:
   flutter:
     sdk: flutter
   web_socket_channel: ^2.4.0 # 👈 Dependencia WebSocket
+  animated_text_kit: ^4.2.2  # ✅ Compatible y estable
 
 dev_dependencies:
   flutter_test:

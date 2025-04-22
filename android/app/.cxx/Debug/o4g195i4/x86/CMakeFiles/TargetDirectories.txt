@@ -1,0 +1,2 @@
+D:/Biblioteca/Documentos/Laboratorios Chelard/ServiApp_UI - copia - copia - copia/android/app/.cxx/Debug/o4g195i4/x86/CMakeFiles/edit_cache.dir
+D:/Biblioteca/Documentos/Laboratorios Chelard/ServiApp_UI - copia - copia - copia/android/app/.cxx/Debug/o4g195i4/x86/CMakeFiles/rebuild_cache.dir
