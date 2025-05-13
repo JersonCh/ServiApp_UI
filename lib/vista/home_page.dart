@@ -4,15 +4,15 @@ import '../controlador/home_controller.dart';
 import '../modelo/categoria_model.dart';
 import '../modelo/servicio_model.dart';
 import 'package:serviapp/styles/home_styles.dart'; // Estilos importados aquí
-/*import 'subcategoria_page.dart';
-import 'tecnologia_page.dart';
-import 'vehiculos_page.dart';
-import 'eventos_page.dart';
-import 'belleza_page.dart';
-import 'salud_page.dart';
-import 'servicios_page.dart';
-import 'educacion_page.dart';
-import 'limpieza_page.dart';*/
+import 'Services/tecnologia_page.dart';
+import 'Services/eventos_page.dart';
+import 'Services/belleza_page.dart';
+import 'Services/educacion_page.dart';
+import 'Services/limpieza_page.dart';
+import 'Services/vehiculos_page.dart';
+import 'Services/salud_page.dart';
+import 'Services/servicios_generales_page.dart';
+
 
 class HomePage extends StatefulWidget {
   @override
@@ -67,28 +67,28 @@ class _HomePageState extends State<HomePage> {
                   Widget? page;
                   switch (categoria.label) {
                     case 'Tecnologia':
-                      //page = TecnologiayElectronicaPage();
+                      page = TecnologiayElectronicaPage();
                       break;
                     case 'Vehículos':
-                      //page = VehiculosTransportePage();
+                      page = VehiculosTransportePage();
                       break;
                     case 'Eventos':
-                      //page = EventosEntretenimientoPage();
+                      page = EventosEntretenimientoPage();
                       break;
                     case 'Estetica':
-                      //page = BellezaEsteticaPage();
+                      page = BellezaEsteticaPage();
                       break;
                     case 'Salud y Bienestar':
-                      //page = SaludBienestarPage();
+                      page = SaludBienestarPage();
                       break;
                     case 'Servicios Generales':
-                      //page = ServiciosGeneralesPage();
+                      page = ServiciosGeneralesPage();
                       break;
                     case 'Educacion':
-                      //page = EducacionCapacitacionPage();
+                      page = EducacionCapacitacionPage();
                       break;
                     case 'Limpieza':
-                      //page = LimpiezaMantenimientoPage();
+                      page = LimpiezaMantenimientoPage();
                       break;
                   }
                   if (page != null) {
