@@ -1,15 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:serviapp/styles/Services/servicios_styles.dart';
 
-/// Modelo de datos para servicios
 class ServiceModel {
   final String title;
   final String imageUrl;
 
-  ServiceModel({required this.title, required this.imageUrl});
+  const ServiceModel({required this.title, required this.imageUrl});
 }
 
-/// Widget de encabezado para la página de servicios
 class ServiciosHeader extends StatelessWidget implements PreferredSizeWidget {
   const ServiciosHeader({Key? key}) : super(key: key);
 
@@ -18,16 +16,8 @@ class ServiciosHeader extends StatelessWidget implements PreferredSizeWidget {
     return AppBar(
       backgroundColor: ServiciosStyles.primaryColor,
       elevation: 0,
-      // Barra de búsqueda (comentada en el código original)
-      // title: TextField(
-      //   decoration: InputDecoration(
-      //     hintText: 'Buscar aquí',
-      //     hintStyle: TextStyle(color: const Color.fromARGB(179, 250, 250, 250)),
-      //     prefixIcon: Icon(Icons.search, color: Colors.white),
-      //     border: InputBorder.none,
-      //   ),
-      //   style: TextStyle(color: Colors.white),
-      // ),
+      title: const Text('Servicios', style: TextStyle(color: Colors.white)),
+      centerTitle: true,
     );
   }
 
@@ -35,7 +25,6 @@ class ServiciosHeader extends StatelessWidget implements PreferredSizeWidget {
   Size get preferredSize => const Size.fromHeight(kToolbarHeight);
 }
 
-/// Widget de pie de página para la navegación
 class ServiciosFooter extends StatelessWidget {
   const ServiciosFooter({Key? key}) : super(key: key);
 
@@ -43,8 +32,8 @@ class ServiciosFooter extends StatelessWidget {
   Widget build(BuildContext context) {
     return BottomNavigationBar(
       backgroundColor: ServiciosStyles.primaryColor,
-      selectedItemColor: ServiciosStyles.selectedItemColor,
-      unselectedItemColor: ServiciosStyles.unselectedItemColor,
+      selectedItemColor: Colors.white,
+      unselectedItemColor: Colors.white70,
       items: const [
         BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Inicio'),
         BottomNavigationBarItem(icon: Icon(Icons.explore), label: 'Explorar'),
@@ -55,76 +44,100 @@ class ServiciosFooter extends StatelessWidget {
   }
 }
 
-/// Widget para mostrar servicios en cuadrícula
 class ServiceGrid extends StatelessWidget {
   final List<ServiceModel> services;
+  final Function(ServiceModel)? onItemTap;
 
-  const ServiceGrid({Key? key, required this.services}) : super(key: key);
-
-  @override
-  Widget build(BuildContext context) {
-    return GridView.count(
-      crossAxisCount: 2,
-      crossAxisSpacing: ServiciosStyles.itemSpacing,
-      mainAxisSpacing: ServiciosStyles.itemSpacing,
-      children: services
-          .map((service) => ServiceCard(
-                title: service.title,
-                imageUrl: service.imageUrl,
-              ))
-          .toList(),
-    );
-  }
-}
-
-/// Widget para mostrar tarjeta de servicio individual
-class ServiceCard extends StatelessWidget {
-  final String title;
-  final String imageUrl;
-
-  const ServiceCard({
+  const ServiceGrid({
     Key? key,
-    required this.title,
-    required this.imageUrl,
+    required this.services,
+    this.onItemTap,
   }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      children: [
-        // Imagen del servicio
-        ClipRRect(
-          borderRadius: ServiciosStyles.cardBorderRadius,
-          child: Image.network(
-            imageUrl,
-            height: ServiciosStyles.serviceImageHeight,
-            width: double.infinity,
-            fit: BoxFit.cover,
-          ),
+    return GridView.builder(
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: 2,
+        crossAxisSpacing: 12,
+        mainAxisSpacing: 12,
+        childAspectRatio: 0.9,
+      ),
+      itemCount: services.length,
+      itemBuilder: (context, index) {
+        return ServiceCard(
+          service: services[index],
+          onTap: () => onItemTap?.call(services[index]),
+        );
+      },
+    );
+  }
+}
+
+class ServiceCard extends StatelessWidget {
+  final ServiceModel service;
+  final VoidCallback? onTap;
+
+  const ServiceCard({
+    Key? key,
+    required this.service,
+    this.onTap,
+  }) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Card(
+        elevation: 4,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
         ),
-        SizedBox(height: ServiciosStyles.smallSpacing),
-        
-        // Botón del servicio
-        SizedBox(
-          height: ServiciosStyles.buttonHeight,
-          width: double.infinity,
-          child: ElevatedButton(
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Seleccionado: $title')),
-              );
-            },
-            style: ServiciosStyles.primaryButtonStyle,
-            child: Text(
-              title,
-              textAlign: TextAlign.center,
-              style: ServiciosStyles.buttonTextStyle,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Expanded(
+              child: ClipRRect(
+                borderRadius: const BorderRadius.vertical(
+                  top: Radius.circular(12)),
+                child: Image.network(
+                  service.imageUrl,
+                  fit: BoxFit.cover,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return Center(
+                      child: CircularProgressIndicator(
+                        value: loadingProgress.expectedTotalBytes != null
+                            ? loadingProgress.cumulativeBytesLoaded /
+                                loadingProgress.expectedTotalBytes!
+                            : null,
+                      ),
+                    );
+                  },
+                  errorBuilder: (context, error, stackTrace) {
+                    return const Center(
+                      child: Icon(Icons.error_outline, color: Colors.red),
+                    );
+                  },
+                ),
+              ),
             ),
-          ),
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Text(
+                service.title,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
         ),
-      ],
+      ),
     );
   }
 }

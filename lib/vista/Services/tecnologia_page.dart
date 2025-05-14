@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'servicios_page_base.dart';
+import 'package:serviapp/vista/Services/servicios_page_base.dart';
 import 'package:serviapp/vista/Services/servicios_widgets.dart';
+import 'package:serviapp/vista/Services/todo.dart';
 
 class TecnologiayElectronicaPage extends StatelessWidget {
   const TecnologiayElectronicaPage({Key? key}) : super(key: key);
@@ -10,10 +11,17 @@ class TecnologiayElectronicaPage extends StatelessWidget {
     return ServiciosPageBase(
       titulo: 'Tecnologia y Electrónica',
       servicios: _getTecnologiaServices(),
+      onServiceTap: (subcategoria) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => TodoPage(subcategoria: subcategoria),
+          ),
+        );
+      },
     );
   }
 
-  // Lista de servicios disponibles para tecnología y electrónica
   List<ServiceModel> _getTecnologiaServices() {
     return [
       ServiceModel(

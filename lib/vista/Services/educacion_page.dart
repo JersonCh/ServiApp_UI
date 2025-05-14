@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:serviapp/vista/Services/todo.dart';
 import 'servicios_page_base.dart';
 import 'package:serviapp/vista/Services/servicios_widgets.dart';
 
@@ -10,6 +11,14 @@ class EducacionCapacitacionPage extends StatelessWidget {
     return ServiciosPageBase(
       titulo: 'Educación y Capacitación:',
       servicios: _getEducacionServices(),
+      onServiceTap: (subcategoria) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => TodoPage(subcategoria: subcategoria),
+          ),
+        );
+      },
     );
   }
 
