@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:serviapp/vista/home_page.dart';
+import 'package:serviapp/vista/home_proveedor_page.dart';
 import 'package:serviapp/vista/usuario/new_user_page.dart';
 import 'package:serviapp/controlador/login_controller.dart';
 import 'package:serviapp/styles/login_styles.dart';
@@ -15,23 +16,35 @@ class _LoginPageState extends State<LoginPage> {
   final LoginController loginController = LoginController();
   bool _obscurePassword = true;
 
-  void login() async {
-    String email = emailController.text;
-    String password = passwordController.text;
-
-    final user = await loginController.loginUser(email, password);
-
-    if (user != null) {
+void login() async {
+  String email = emailController.text;
+  String password = passwordController.text;
+  
+  final result = await loginController.loginUser(email, password);
+  
+  if (result != null) {
+    // Depuración - verifica el rol que está llegando
+    print("ROL DEL USUARIO: ${result['rol']}");
+    
+    // Comparación exacta de strings
+    if (result['rol'] == 'proveedor') {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => HomeProveedorPage()),
+      );
+    } else {
+      // Si es cliente u otro rol, ir a la página regular
       Navigator.pushReplacement(
         context,
         MaterialPageRoute(builder: (context) => HomePage()),
       );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Correo o contraseña incorrectos')),
-      );
     }
+  } else {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Correo o contraseña incorrectos')),
+    );
   }
+}
 
   @override
   Widget build(BuildContext context) {
