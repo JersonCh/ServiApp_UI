@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:serviapp/vista/Usuario/perfil_usuario.dart';
 import '../controlador/login_controller.dart';
 import '../controlador/home_controller.dart';
 import '../modelo/categoria_model.dart';
@@ -219,7 +220,7 @@ class _HomePageState extends State<HomePage> {
       ),
       Center(child: Text('Explorar')),
       Center(child: Text('Buscar')),
-      Center(child: Text('Perfil')),
+      PerfilUsuarioPage(),
     ];
 
     return Scaffold(
