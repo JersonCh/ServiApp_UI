@@ -9,76 +9,124 @@ class HomeController {
         label: 'Tecnologia',
         icon: Icons.devices,
         color: Colors.blue,
-        gradient: LinearGradient(colors: [Colors.blue, Colors.lightBlue]),
-      ),
+        gradient: LinearGradient(colors: [Colors.blue, Colors.lightBlue])),
       Categoria(
         label: 'Vehículos',
         icon: Icons.directions_car,
         color: Colors.red,
-        gradient: LinearGradient(colors: [Colors.red, Colors.orange]),
-      ),
+        gradient: LinearGradient(colors: [Colors.red, Colors.orange])),
       Categoria(
         label: 'Eventos',
         icon: Icons.event,
         color: Colors.purple,
-        gradient: LinearGradient(colors: [Colors.purple, Colors.deepPurple]),
-      ),
+        gradient: LinearGradient(colors: [Colors.purple, Colors.deepPurple])),
       Categoria(
         label: 'Estetica',
         icon: Icons.spa,
         color: Colors.pink,
-        gradient: LinearGradient(colors: [Colors.pink, Colors.pinkAccent]),
-      ),
+        gradient: LinearGradient(colors: [Colors.pink, Colors.pinkAccent])),
       Categoria(
         label: 'Salud y Bienestar',
         icon: Icons.favorite,
         color: Colors.green,
-        gradient: LinearGradient(colors: [Colors.green, Colors.teal]),
-      ),
+        gradient: LinearGradient(colors: [Colors.green, Colors.teal])),
       Categoria(
         label: 'Servicios Generales',
         icon: Icons.build,
         color: Colors.indigo,
-        gradient: LinearGradient(colors: [Colors.indigo, Colors.indigoAccent]),
-      ),
+        gradient: LinearGradient(colors: [Colors.indigo, Colors.indigoAccent])),
       Categoria(
         label: 'Educacion',
         icon: Icons.school,
         color: Colors.amber,
-        gradient: LinearGradient(colors: [Colors.amber, Colors.orangeAccent]),
-      ),
+        gradient: LinearGradient(colors: [Colors.amber, Colors.orangeAccent])),
       Categoria(
         label: 'Limpieza',
         icon: Icons.cleaning_services,
         color: Colors.teal,
-        gradient: LinearGradient(colors: [Colors.teal, Colors.greenAccent]),
-      ),
+        gradient: LinearGradient(colors: [Colors.teal, Colors.greenAccent])),
     ];
   }
 
   List<Servicio> obtenerServiciosPopulares() {
     return [
       Servicio(
-        title: 'Reparación de computadoras',
-        rating: 4.8,
-        reviews: 120,
-        icon: Icons.computer_rounded,
-        color: Colors.blue[700]!,
+        id: '1',
+        titulo: 'Reparación de computadoras',
+        descripcion: 'Servicio técnico especializado',
+        telefono: '+123456789',
+        subcategoria: 'Tecnologia',
+        sumaCalificaciones: 576.0, // 4.8 * 120
+        totalCalificaciones: 120,
+        icon: Icons.computer,
+        color: Colors.blue,
       ),
       Servicio(
-        title: 'Limpieza del hogar',
-        rating: 4.7,
-        reviews: 85,
-        icon: Icons.cleaning_services_rounded,
-        color: Colors.teal[700]!,
+        id: '2',
+        titulo: 'Limpieza del hogar',
+        descripcion: 'Limpieza profesional',
+        telefono: '+987654321',
+        subcategoria: 'Limpieza',
+        sumaCalificaciones: 399.5, // 4.7 * 85
+        totalCalificaciones: 85,
+        icon: Icons.cleaning_services,
+        color: Colors.teal,
       ),
       Servicio(
-        title: 'Plomería de emergencia',
-        rating: 4.9,
-        reviews: 210,
-        icon: Icons.plumbing_rounded,
-        color: Colors.indigo[700]!,
+        id: '3',
+        titulo: 'Plomería de emergencia',
+        descripcion: 'Servicio 24/7',
+        telefono: '+112233445',
+        subcategoria: 'Servicios Generales',
+        sumaCalificaciones: 1029.0, // 4.9 * 210
+        totalCalificaciones: 210,
+        icon: Icons.plumbing,
+        color: Colors.indigo,
       ),
     ];
+  }
+
+  // Método para agregar una nueva calificación
+  Future<void> agregarCalificacion(String servicioId, double calificacion) async {
+    final servicio = obtenerServiciosPopulares()
+        .firstWhere((s) => s.id == servicioId);
+    
+    // En una app real, aquí harías la actualización en Firestore
+    // await FirebaseFirestore.instance
+    //     .collection('servicios')
+    //     .doc(servicioId)
+    //     .update(servicio.toUpdateMap(calificacion));
+    
+    // Para datos mock, actualizamos localmente (solo para demostración)
+    final index = obtenerServiciosPopulares().indexWhere((s) => s.id == servicioId);
+    if (index != -1) {
+      obtenerServiciosPopulares()[index] = Servicio(
+        id: servicio.id,
+        titulo: servicio.titulo,
+        descripcion: servicio.descripcion,
+        telefono: servicio.telefono,
+        subcategoria: servicio.subcategoria,
+        sumaCalificaciones: servicio.sumaCalificaciones + calificacion,
+        totalCalificaciones: servicio.totalCalificaciones + 1,
+        icon: servicio.icon,
+        color: servicio.color,
+      );
+    }
+  }
+
+  // Método para obtener servicios por categoría
+  List<Servicio> obtenerServiciosPorCategoria(String categoria) {
+    return obtenerServiciosPopulares()
+        .where((servicio) => servicio.subcategoria == categoria)
+        .toList();
+  }
+
+  // Método para buscar servicios
+  List<Servicio> buscarServicios(String query) {
+    return obtenerServiciosPopulares()
+        .where((servicio) =>
+            servicio.titulo.toLowerCase().contains(query.toLowerCase()) ||
+            servicio.descripcion.toLowerCase().contains(query.toLowerCase()))
+        .toList();
   }
 }
