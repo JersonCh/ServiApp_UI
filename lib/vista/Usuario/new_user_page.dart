@@ -9,26 +9,68 @@ class NewUserPage extends StatefulWidget {
 }
 
 class _NewUserPageState extends State<NewUserPage> {
+  final _nombreController = TextEditingController();
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
+  final _celularController = TextEditingController();
+  final _dniController = TextEditingController();
   final _usuarioController = UsuarioController();
 
   String _errorMessage = "";
 
   void _registerUser() async {
-    if (_passwordController.text != _confirmPasswordController.text) {
+    String nombre = _nombreController.text.trim();
+    String email = _emailController.text.trim();
+    String password = _passwordController.text;
+    String confirmPassword = _confirmPasswordController.text;
+    String dni = _dniController.text.trim();
+    String celular = _celularController.text.trim();
+
+    setState(() => _errorMessage = "");
+
+    // Validaciones
+    if (nombre.isEmpty ||
+        email.isEmpty ||
+        password.isEmpty ||
+        confirmPassword.isEmpty ||
+        dni.isEmpty ||
+        celular.isEmpty) {
+      setState(() {
+        _errorMessage = "Todos los campos son obligatorios.";
+      });
+      return;
+    }
+
+    if (password != confirmPassword) {
       setState(() {
         _errorMessage = "Las contraseñas no coinciden.";
       });
       return;
     }
 
+    if (!RegExp(r'^\d{8}$').hasMatch(dni)) {
+      setState(() {
+        _errorMessage = "El DNI debe tener 8 dígitos.";
+      });
+      return;
+    }
+
+    if (!RegExp(r'^\d{9}$').hasMatch(celular)) {
+      setState(() {
+        _errorMessage = "El número de celular debe tener 9 dígitos.";
+      });
+      return;
+    }
+
     final usuario = Usuario(
       id: "",
-      email: _emailController.text,
-      password: _passwordController.text,
+      nombre: nombre,
+      email: email,
+      password: password,
       rol: "cliente",
+      celular: celular,
+      dni: dni,
     );
 
     try {
@@ -48,47 +90,84 @@ class _NewUserPageState extends State<NewUserPage> {
         child: SingleChildScrollView(
           padding: const EdgeInsets.all(20),
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              SizedBox(height: 30),
-              Image.asset('assets/images/signup_illustration.png', height: 180),
-              SizedBox(height: 20),
-              Text("Sign Up", style: NewUserStyles.title),
-              SizedBox(height: 20),
+              const SizedBox(height: 30),
+              AnimatedContainer(
+                duration: const Duration(milliseconds: 700),
+                curve: Curves.easeOut,
+                height: 180,
+                child: Image.asset('assets/images/signup_illustration.png'),
+              ),
+              const SizedBox(height: 20),
+              Text(
+                "Crear Cuenta",
+                style: NewUserStyles.title,
+                textAlign: TextAlign.center,
+              ),
+              const SizedBox(height: 20),
+              TextField(
+                controller: _nombreController,
+                decoration: NewUserStyles.inputDecoration("Nombre completo"),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: _dniController,
+                keyboardType: TextInputType.number,
+                decoration: NewUserStyles.inputDecoration("DNI"),
+              ),
+              const SizedBox(height: 10),
+              TextField(
+                controller: _celularController,
+                keyboardType: TextInputType.phone,
+                decoration: NewUserStyles.inputDecoration("Celular"),
+              ),
+              const SizedBox(height: 10),
               TextField(
                 controller: _emailController,
                 keyboardType: TextInputType.emailAddress,
                 decoration: NewUserStyles.inputDecoration("Email"),
               ),
-              SizedBox(height: 10),
+              const SizedBox(height: 10),
               TextField(
                 controller: _passwordController,
                 obscureText: true,
-                decoration: NewUserStyles.inputDecoration("Password"),
+                decoration: NewUserStyles.inputDecoration("Contraseña"),
               ),
-              SizedBox(height: 10),
+              const SizedBox(height: 10),
               TextField(
                 controller: _confirmPasswordController,
                 obscureText: true,
-                decoration: NewUserStyles.inputDecoration("Confirm Password"),
+                decoration: NewUserStyles.inputDecoration(
+                  "Confirmar contraseña",
+                ),
               ),
-              SizedBox(height: 10),
+              const SizedBox(height: 10),
               if (_errorMessage.isNotEmpty)
-                Text(_errorMessage, style: NewUserStyles.errorText),
-              SizedBox(height: 20),
-              ElevatedButton(
+                Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: Text(
+                    _errorMessage,
+                    style: NewUserStyles.errorText,
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              const SizedBox(height: 20),
+              ElevatedButton.icon(
                 onPressed: _registerUser,
-                child: Text("Create Account"),
+                icon: const Icon(Icons.person_add),
+                label: const Text("Crear Cuenta"),
                 style: NewUserStyles.primaryButton,
               ),
-              SizedBox(height: 15),
+              const SizedBox(height: 15),
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Text("Already have an account? "),
+                  const Text("¿Ya tienes una cuenta? "),
                   GestureDetector(
                     onTap: () => Navigator.pushNamed(context, '/login'),
-                    child: Text(
-                      "Sign In",
+                    child: const Text(
+                      "Inicia sesión",
                       style: TextStyle(
                         color: Colors.blue,
                         fontWeight: FontWeight.bold,

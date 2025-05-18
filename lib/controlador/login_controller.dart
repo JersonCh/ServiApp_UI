@@ -16,32 +16,34 @@ class LoginController {
 
       if (user != null) {
         // Obtener información del usuario desde Firestore
-        DocumentSnapshot userDoc = await _firestore.collection('users').doc(user.uid).get();
-        
+        DocumentSnapshot userDoc =
+            await _firestore.collection('users').doc(user.uid).get();
+
         if (userDoc.exists) {
-          Map<String, dynamic> userData = userDoc.data() as Map<String, dynamic>;
-          
-          // Asigna el UID del usuario logueado a la clase GlobalUser
+          Map<String, dynamic> userData =
+              userDoc.data() as Map<String, dynamic>;
+
+          // Actualizar isOnline a true
+          await _firestore.collection('users').doc(user.uid).update({
+            'isOnline': true,
+          });
+
           GlobalUser.uid = user.uid;
-          
-          // También guardar el rol del usuario
           GlobalUser.rol = userData['rol'] ?? 'cliente';
-          
-          // Devolver un mapa con usuario y rol
-          return {
-            'user': user,
-            'rol': GlobalUser.rol,
-          };
+
+          return {'user': user, 'rol': GlobalUser.rol};
         }
-        
-        // Si no existe documento, asume rol cliente por defecto
+
+        // Si no existe documento, crear uno por defecto con isOnline = true
+        await _firestore.collection('users').doc(user.uid).set({
+          'rol': 'cliente',
+          'isOnline': true,
+        });
+
         GlobalUser.uid = user.uid;
         GlobalUser.rol = 'cliente';
-        
-        return {
-          'user': user,
-          'rol': 'cliente',
-        };
+
+        return {'user': user, 'rol': 'cliente'};
       }
 
       return null;
@@ -53,8 +55,18 @@ class LoginController {
 
   // Método para cerrar sesión
   Future<void> logout() async {
+    if (GlobalUser.uid != null) {
+      try {
+        await _firestore.collection('users').doc(GlobalUser.uid).update({
+          'isOnline': false,
+        });
+        print('isOnline actualizado a false');
+      } catch (e) {
+        print('Error al actualizar isOnline: $e');
+      }
+    }
+
     await _auth.signOut();
-    // Limpiar datos al cerrar sesión
     GlobalUser.uid = null;
     GlobalUser.rol = null;
   }
