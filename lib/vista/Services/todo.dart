@@ -31,37 +31,179 @@ class _TodoPageState extends State<TodoPage> {
     return Scaffold(
       backgroundColor: ServiciosStyles.backgroundColor,
       appBar: AppBar(title: Text(widget.subcategoria), centerTitle: true),
-      body: StreamBuilder<QuerySnapshot>(
-        stream:
-            FirebaseFirestore.instance
-                .collection('servicios')
-                .where('subcategoria', isEqualTo: widget.subcategoria)
-                .where('estado', isEqualTo: "true")
-                .snapshots(),
-        builder: (context, snapshot) {
-          if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
-          }
+      body: Column(
+        children: [
+          StreamBuilder<QuerySnapshot>(
+            stream:
+                FirebaseFirestore.instance
+                    .collection('notificaciones')
+                    .where(
+                      'clienteId',
+                      isEqualTo: FirebaseAuth.instance.currentUser?.uid,
+                    )
+                    .where(
+                      'estado',
+                      isEqualTo: 'aceptado',
+                    ) // Asegúrate que usas este valor para "aceptado"
+                    .snapshots(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const SizedBox(); // Puedes mostrar un loader si deseas
+              }
 
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          }
+              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                return const SizedBox(); // No mostrar nada si no hay notificaciones aceptadas
+              }
 
-          if (snapshot.data!.docs.isEmpty) {
-            return const Center(child: Text('No hay servicios disponibles'));
-          }
+              final notificaciones = snapshot.data!.docs;
+              print('🔔 Total de notificaciones: ${notificaciones.length}');
 
-          return ListView.separated(
-            padding: const EdgeInsets.all(16),
-            itemCount: snapshot.data!.docs.length,
-            separatorBuilder: (context, index) => const SizedBox(height: 12),
-            itemBuilder: (context, index) {
-              final doc = snapshot.data!.docs[index];
-              final servicio = Servicio.fromFirestore(doc);
-              return _buildServiceCard(context, servicio);
+              return Column(
+                children:
+                    notificaciones.map((doc) {
+                      final data = doc.data() as Map<String, dynamic>;
+                      print('📄 Notificación data: $data');
+
+                      final proveedorId = data['proveedorId'];
+                      print('🔎 Buscando proveedor con ID: $proveedorId');
+
+                      return FutureBuilder<DocumentSnapshot>(
+                        future:
+                            FirebaseFirestore.instance
+                                .collection('users')
+                                .doc(proveedorId)
+                                .get(),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState ==
+                              ConnectionState.waiting) {
+                            return const Center(
+                              child: CircularProgressIndicator(),
+                            );
+                          }
+
+                          if (!snapshot.hasData || !snapshot.data!.exists) {
+                            print(
+                              '⚠️ Proveedor no encontrado para ID: $proveedorId',
+                            );
+                            return const SizedBox();
+                          }
+
+                          final proveedor = snapshot.data!;
+                          final nombre = proveedor['nombre'] ?? 'Proveedor';
+                          final telefono = proveedor['celular'] ?? '';
+
+                          print(
+                            '✅ Proveedor encontrado: nombre=$nombre, celular=$telefono',
+                          );
+
+                          return Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Card(
+                              color: Colors.lightGreen.shade50,
+                              elevation: 3,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Puedes contactarte con el proveedor, sus datos son:',
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 8),
+                                    Text(
+                                      'Nombres: ' +
+                                          '$nombre\n'
+                                              'Celular: ' +
+                                          '$telefono',
+                                      style: const TextStyle(fontSize: 16),
+                                    ),
+                                    const SizedBox(height: 12),
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          child: ElevatedButton.icon(
+                                            onPressed:
+                                                () => _makePhoneCall(telefono),
+                                            icon: const Icon(Icons.phone),
+                                            label: Text('Llamar'),
+                                            style: ElevatedButton.styleFrom(
+                                              backgroundColor: Colors.blue,
+                                            ),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 8),
+                                        ElevatedButton.icon(
+                                          onPressed:
+                                              () => _openWhatsApp(telefono),
+                                          icon: const FaIcon(
+                                            FontAwesomeIcons.whatsapp,
+                                          ),
+                                          label: const Text('WhatsApp'),
+                                          style: ElevatedButton.styleFrom(
+                                            backgroundColor: const Color(
+                                              0xFF25D366,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ),
+                          );
+                        },
+                      );
+                    }).toList(),
+              );
             },
-          );
-        },
+          ),
+          const Divider(),
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream:
+                  FirebaseFirestore.instance
+                      .collection('servicios')
+                      .where('subcategoria', isEqualTo: widget.subcategoria)
+                      .where('estado', isEqualTo: "true")
+                      .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
+
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (snapshot.data!.docs.isEmpty) {
+                  return const Center(
+                    child: Text('No hay servicios disponibles'),
+                  );
+                }
+
+                return ListView.separated(
+                  padding: const EdgeInsets.all(16),
+                  itemCount: snapshot.data!.docs.length,
+                  separatorBuilder:
+                      (context, index) => const SizedBox(height: 12),
+                  itemBuilder: (context, index) {
+                    final doc = snapshot.data!.docs[index];
+                    final servicio = Servicio.fromFirestore(doc);
+                    return _buildServiceCard(context, servicio);
+                  },
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
