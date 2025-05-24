@@ -16,14 +16,267 @@ class TodoPage extends StatefulWidget {
   _TodoPageState createState() => _TodoPageState();
 }
 
+class HistorialSolicitudesPage extends StatelessWidget {
+  final String subcategoria;
+
+  const HistorialSolicitudesPage({super.key, required this.subcategoria});
+
+  void _mostrarProveedoresModal(
+    BuildContext context,
+    String subcategoria,
+  ) async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Debes iniciar sesión para ver proveedores.'),
+        ),
+      );
+      return;
+    }
+
+    final userDoc =
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(currentUser.uid)
+            .get();
+    final String userType = userDoc.data()?['rol'] ?? 'desconocido';
+
+    if (userType != 'cliente') return;
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.8,
+          builder: (ctx, scrollController) {
+            return Scaffold(
+              appBar: AppBar(
+                automaticallyImplyLeading: false,
+                title: Text('Proveedores para: $subcategoria'),
+                actions: [
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(ctx).pop(),
+                  ),
+                ],
+              ),
+              body: StreamBuilder<QuerySnapshot>(
+                stream:
+                    FirebaseFirestore.instance
+                        .collection('users')
+                        .where('rol', isEqualTo: 'proveedor')
+                        .where('tipoTrabajo', arrayContains: subcategoria)
+                        .where('isOnline', isEqualTo: true)
+                        .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return Center(child: Text('Error: ${snapshot.error}'));
+                  }
+
+                  final docs = snapshot.data?.docs ?? [];
+                  if (docs.isEmpty) {
+                    return const Center(
+                      child: Text('No se encontraron proveedores disponibles.'),
+                    );
+                  }
+
+                  return ListView.builder(
+                    controller: scrollController,
+                    itemCount: docs.length,
+                    itemBuilder: (context, index) {
+                      final data = docs[index].data() as Map<String, dynamic>;
+                      final uidProveedor = docs[index].id;
+                      final nombre = data['nombre'] ?? 'Proveedor sin nombre';
+                      final celular = data['celular'] ?? 'Número no disponible';
+
+                      return ListTile(
+                        title: Text(nombre),
+                        subtitle: Text('Celular: $celular'),
+                        trailing: ElevatedButton(
+                          child: const Text('Solicitar servicio'),
+                          onPressed: () async {
+                            final solicitudId = const Uuid().v4();
+                            await FirebaseFirestore.instance
+                                .collection('notificaciones')
+                                .doc(solicitudId)
+                                .set({
+                                  'id': solicitudId,
+                                  'clienteId': currentUser.uid,
+                                  'nombreCliente':
+                                      userDoc.data()?['nombre'] ?? '',
+                                  'proveedorId': uidProveedor,
+                                  'estado': 'pendiente',
+                                  'etapa': '',
+                                  'subcategoria': subcategoria,
+                                  'timestamp': FieldValue.serverTimestamp(),
+                                });
+                            Navigator.of(ctx).pop();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Solicitud enviada al proveedor.',
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    // Llamamos al modal solo después de que se haya construido el primer frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _mostrarProveedoresModal(context, subcategoria);
+    });
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Historial de solicitudes'),
+        centerTitle: true,
+      ),
+      body: StreamBuilder<QuerySnapshot>(
+        stream:
+            FirebaseFirestore.instance
+                .collection('notificaciones')
+                .where(
+                  'clienteId',
+                  isEqualTo: FirebaseAuth.instance.currentUser?.uid,
+                )
+                .where('estado', isEqualTo: 'aceptado')
+                .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+            return const Center(child: Text('No hay solicitudes aceptadas.'));
+          }
+
+          final notificaciones = snapshot.data!.docs;
+
+          return ListView.builder(
+            padding: const EdgeInsets.all(16),
+            itemCount: notificaciones.length,
+            itemBuilder: (context, index) {
+              final data = notificaciones[index].data() as Map<String, dynamic>;
+              final proveedorId = data['proveedorId'];
+
+              return FutureBuilder<DocumentSnapshot>(
+                future:
+                    FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(proveedorId)
+                        .get(),
+                builder: (context, snap) {
+                  if (snap.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (!snap.hasData || !snap.data!.exists) {
+                    return const SizedBox();
+                  }
+                  final proveedor = snap.data!;
+                  final nombre = proveedor['nombre'] ?? 'Proveedor';
+                  final telefono = proveedor['celular'] ?? '';
+
+                  return Card(
+                    color: Colors.lightGreen.shade50,
+                    elevation: 3,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Puedes contactarte con el proveedor, sus datos son:',
+                            style: TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Nombres: $nombre\nCelular: $telefono',
+                            style: const TextStyle(fontSize: 16),
+                          ),
+                          const SizedBox(height: 12),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton.icon(
+                                  onPressed: () {
+                                    final Uri uri = Uri(
+                                      scheme: 'tel',
+                                      path: telefono,
+                                    );
+                                    launchUrl(uri);
+                                  },
+                                  icon: const Icon(Icons.phone),
+                                  label: const Text('Llamar'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.blue,
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              ElevatedButton.icon(
+                                onPressed: () {
+                                  final formatted = telefono.replaceAll(
+                                    RegExp(r'[^0-9]'),
+                                    '',
+                                  );
+                                  final Uri uri = Uri.parse(
+                                    'https://wa.me/51$formatted',
+                                  );
+                                  launchUrl(
+                                    uri,
+                                    mode: LaunchMode.externalApplication,
+                                  );
+                                },
+                                icon: const FaIcon(FontAwesomeIcons.whatsapp),
+                                label: const Text('WhatsApp'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: const Color(0xFF25D366),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  );
+                },
+              );
+            },
+          );
+        },
+      ),
+    );
+  }
+}
+
 class _TodoPageState extends State<TodoPage> {
   @override
   void initState() {
     super.initState();
-    print('Subcategoría seleccionada: ${widget.subcategoria}');
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      _mostrarProveedoresModal(context, widget.subcategoria);
-    });
   }
 
   @override
@@ -31,179 +284,52 @@ class _TodoPageState extends State<TodoPage> {
     return Scaffold(
       backgroundColor: ServiciosStyles.backgroundColor,
       appBar: AppBar(title: Text(widget.subcategoria), centerTitle: true),
-      body: Column(
-        children: [
-          StreamBuilder<QuerySnapshot>(
-            stream:
-                FirebaseFirestore.instance
-                    .collection('notificaciones')
-                    .where(
-                      'clienteId',
-                      isEqualTo: FirebaseAuth.instance.currentUser?.uid,
-                    )
-                    .where(
-                      'estado',
-                      isEqualTo: 'aceptado',
-                    ) // Asegúrate que usas este valor para "aceptado"
-                    .snapshots(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const SizedBox(); // Puedes mostrar un loader si deseas
-              }
-
-              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                return const SizedBox(); // No mostrar nada si no hay notificaciones aceptadas
-              }
-
-              final notificaciones = snapshot.data!.docs;
-              print('🔔 Total de notificaciones: ${notificaciones.length}');
-
-              return Column(
-                children:
-                    notificaciones.map((doc) {
-                      final data = doc.data() as Map<String, dynamic>;
-                      print('📄 Notificación data: $data');
-
-                      final proveedorId = data['proveedorId'];
-                      print('🔎 Buscando proveedor con ID: $proveedorId');
-
-                      return FutureBuilder<DocumentSnapshot>(
-                        future:
-                            FirebaseFirestore.instance
-                                .collection('users')
-                                .doc(proveedorId)
-                                .get(),
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState ==
-                              ConnectionState.waiting) {
-                            return const Center(
-                              child: CircularProgressIndicator(),
-                            );
-                          }
-
-                          if (!snapshot.hasData || !snapshot.data!.exists) {
-                            print(
-                              '⚠️ Proveedor no encontrado para ID: $proveedorId',
-                            );
-                            return const SizedBox();
-                          }
-
-                          final proveedor = snapshot.data!;
-                          final nombre = proveedor['nombre'] ?? 'Proveedor';
-                          final telefono = proveedor['celular'] ?? '';
-
-                          print(
-                            '✅ Proveedor encontrado: nombre=$nombre, celular=$telefono',
-                          );
-
-                          return Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Card(
-                              color: Colors.lightGreen.shade50,
-                              elevation: 3,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(12),
-                              ),
-                              child: Padding(
-                                padding: const EdgeInsets.all(16),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text(
-                                      'Puedes contactarte con el proveedor, sus datos son:',
-                                      style: TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 8),
-                                    Text(
-                                      'Nombres: ' +
-                                          '$nombre\n'
-                                              'Celular: ' +
-                                          '$telefono',
-                                      style: const TextStyle(fontSize: 16),
-                                    ),
-                                    const SizedBox(height: 12),
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: ElevatedButton.icon(
-                                            onPressed:
-                                                () => _makePhoneCall(telefono),
-                                            icon: const Icon(Icons.phone),
-                                            label: Text('Llamar'),
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: Colors.blue,
-                                            ),
-                                          ),
-                                        ),
-                                        const SizedBox(width: 8),
-                                        ElevatedButton.icon(
-                                          onPressed:
-                                              () => _openWhatsApp(telefono),
-                                          icon: const FaIcon(
-                                            FontAwesomeIcons.whatsapp,
-                                          ),
-                                          label: const Text('WhatsApp'),
-                                          style: ElevatedButton.styleFrom(
-                                            backgroundColor: const Color(
-                                              0xFF25D366,
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ),
-                          );
-                        },
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 8.0),
+          child: Column(
+            children: [
+              // Aquí el ListView debe estar dentro de un SizedBox con altura limitada para evitar conflicto de scroll
+              SizedBox(
+                height:
+                    MediaQuery.of(context).size.height *
+                    0.5, // o el tamaño que prefieras
+                child: StreamBuilder<QuerySnapshot>(
+                  stream:
+                      FirebaseFirestore.instance
+                          .collection('servicios')
+                          .where('subcategoria', isEqualTo: widget.subcategoria)
+                          .where('estado', isEqualTo: "true")
+                          .snapshots(),
+                  builder: (context, snapshot) {
+                    if (snapshot.hasError) {
+                      return Center(child: Text('Error: ${snapshot.error}'));
+                    }
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    }
+                    if (snapshot.data!.docs.isEmpty) {
+                      return const Center(
+                        child: Text('No hay servicios disponibles'),
                       );
-                    }).toList(),
-              );
-            },
-          ),
-          const Divider(),
-          Expanded(
-            child: StreamBuilder<QuerySnapshot>(
-              stream:
-                  FirebaseFirestore.instance
-                      .collection('servicios')
-                      .where('subcategoria', isEqualTo: widget.subcategoria)
-                      .where('estado', isEqualTo: "true")
-                      .snapshots(),
-              builder: (context, snapshot) {
-                if (snapshot.hasError) {
-                  return Center(child: Text('Error: ${snapshot.error}'));
-                }
-
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                }
-
-                if (snapshot.data!.docs.isEmpty) {
-                  return const Center(
-                    child: Text('No hay servicios disponibles'),
-                  );
-                }
-
-                return ListView.separated(
-                  padding: const EdgeInsets.all(16),
-                  itemCount: snapshot.data!.docs.length,
-                  separatorBuilder:
-                      (context, index) => const SizedBox(height: 12),
-                  itemBuilder: (context, index) {
-                    final doc = snapshot.data!.docs[index];
-                    final servicio = Servicio.fromFirestore(doc);
-                    return _buildServiceCard(context, servicio);
+                    }
+                    return ListView.separated(
+                      padding: const EdgeInsets.all(16),
+                      itemCount: snapshot.data!.docs.length,
+                      separatorBuilder:
+                          (context, index) => const SizedBox(height: 12),
+                      itemBuilder: (context, index) {
+                        final doc = snapshot.data!.docs[index];
+                        final servicio = Servicio.fromFirestore(doc);
+                        return _buildServiceCard(context, servicio);
+                      },
+                    );
                   },
-                );
-              },
-            ),
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -334,121 +460,5 @@ class _TodoPageState extends State<TodoPage> {
     if (await canLaunchUrl(whatsappUri)) {
       await launchUrl(whatsappUri);
     }
-  }
-
-  void _mostrarProveedoresModal(
-    BuildContext context,
-    String subcategoria,
-  ) async {
-    final currentUser = FirebaseAuth.instance.currentUser;
-    if (currentUser == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Debes iniciar sesión para ver proveedores.'),
-        ),
-      );
-      return;
-    }
-
-    final userDoc =
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(currentUser.uid)
-            .get();
-    final String userType = userDoc.data()?['rol'] ?? 'desconocido';
-
-    if (userType != 'cliente') return;
-
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      builder: (ctx) {
-        return DraggableScrollableSheet(
-          expand: false,
-          initialChildSize: 0.8,
-          builder: (ctx, scrollController) {
-            return Scaffold(
-              appBar: AppBar(
-                automaticallyImplyLeading: false,
-                title: Text('Proveedores para: $subcategoria'),
-                actions: [
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.of(ctx).pop(),
-                  ),
-                ],
-              ),
-              body: StreamBuilder<QuerySnapshot>(
-                stream:
-                    FirebaseFirestore.instance
-                        .collection('users')
-                        .where('rol', isEqualTo: 'proveedor')
-                        .where('tipoTrabajo', arrayContains: subcategoria)
-                        .where('isOnline', isEqualTo: true)
-                        .snapshots(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  if (snapshot.hasError) {
-                    return Center(child: Text('Error: ${snapshot.error}'));
-                  }
-
-                  final docs = snapshot.data?.docs ?? [];
-                  if (docs.isEmpty) {
-                    return const Center(
-                      child: Text('No se encontraron proveedores disponibles.'),
-                    );
-                  }
-
-                  return ListView.builder(
-                    controller: scrollController,
-                    itemCount: docs.length,
-                    itemBuilder: (context, index) {
-                      final data = docs[index].data() as Map<String, dynamic>;
-                      final uidProveedor = docs[index].id;
-                      final nombre = data['nombre'] ?? 'Proveedor sin nombre';
-                      final celular = data['celular'] ?? 'Número no disponible';
-
-                      return ListTile(
-                        title: Text(nombre),
-                        subtitle: Text('Celular: $celular'),
-                        trailing: ElevatedButton(
-                          child: const Text('Solicitar servicio'),
-                          onPressed: () async {
-                            final solicitudId = const Uuid().v4();
-                            await FirebaseFirestore.instance
-                                .collection('notificaciones')
-                                .doc(solicitudId)
-                                .set({
-                                  'id': solicitudId,
-                                  'clienteId': currentUser.uid,
-                                  'nombreCliente':
-                                      userDoc.data()?['nombre'] ?? '',
-                                  'proveedorId': uidProveedor,
-                                  'estado': 'pendiente',
-                                  'subcategoria': subcategoria,
-                                  'timestamp': FieldValue.serverTimestamp(),
-                                });
-                            Navigator.of(ctx).pop();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Solicitud enviada al proveedor.',
-                                ),
-                              ),
-                            );
-                          },
-                        ),
-                      );
-                    },
-                  );
-                },
-              ),
-            );
-          },
-        );
-      },
-    );
   }
 }

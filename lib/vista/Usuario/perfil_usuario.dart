@@ -46,22 +46,65 @@ class PerfilUsuarioPage extends StatelessWidget {
           }
 
           final userData = snapshot.data!.data() as Map<String, dynamic>;
+          return FutureBuilder<List<String>>(
+            future: _obtenerSubcategorias(usuarioid!),
+            builder: (context, subcatSnapshot) {
+              if (subcatSnapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-          return _buildProfileContent(context, userData);
+              final tipoTrabajo =
+                  subcatSnapshot.data?.map((e) => '- $e').join('\n') ?? '';
+
+              return _buildProfileContent(context, userData, tipoTrabajo);
+            },
+          );
         },
       ),
     );
   }
 
+  Future<List<String>> _obtenerSubcategorias(String usuarioId) async {
+    try {
+      print('Iniciando consulta de subcategorías para usuarioId: $usuarioId');
+
+      final querySnapshot =
+          await FirebaseFirestore.instance
+              .collection('servicios')
+              .where('idusuario', isEqualTo: usuarioId)
+              .get();
+
+      print(
+        'Consulta completada. Documentos encontrados: ${querySnapshot.docs.length}',
+      );
+
+      for (var doc in querySnapshot.docs) {
+        print('Documento ID: ${doc.id}, subcategoria: ${doc['subcategoria']}');
+      }
+
+      final subcategorias =
+          querySnapshot.docs
+              .map((doc) => doc['subcategoria'] as String?)
+              .where((sub) => sub != null && sub.isNotEmpty)
+              .toSet()
+              .toList();
+
+      print('Subcategorías únicas obtenidas: $subcategorias');
+
+      return subcategorias.cast<String>();
+    } catch (e) {
+      print('Error al obtener subcategorías: $e');
+      return [];
+    }
+  }
+
   Widget _buildProfileContent(
     BuildContext context,
     Map<String, dynamic> userData,
+    String tipoTrabajo,
   ) {
     final rol = userData['rol'] ?? 'cliente';
-    final tipoTrabajo =
-        (userData['tipoTrabajo'] is List)
-            ? (userData['tipoTrabajo'] as List).join(', ')
-            : (userData['tipoTrabajo'] ?? '');
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -139,11 +182,12 @@ class PerfilUsuarioPage extends StatelessWidget {
           Icon(icon, size: 20, color: Colors.grey),
           const SizedBox(width: 12),
           Expanded(child: Text(label, style: const TextStyle(fontSize: 16))),
-          Flexible(
+          Expanded(
             child: Text(
               value,
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-              overflow: TextOverflow.ellipsis,
+              softWrap: true,
+              overflow: TextOverflow.visible,
             ),
           ),
         ],
@@ -206,7 +250,6 @@ class PerfilUsuarioPage extends StatelessWidget {
               : data['tipoTrabajo'] != null
               ? [data['tipoTrabajo'].toString()]
               : null,
-
       experiencia:
           data['experiencia'] is List
               ? List<String>.from(data['experiencia'])

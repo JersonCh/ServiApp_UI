@@ -34,7 +34,7 @@ class Servicio {
   // Factory constructor para crear instancias desde Firestore
   factory Servicio.fromFirestore(DocumentSnapshot doc) {
     final data = doc.data() as Map<String, dynamic>;
-    
+
     return Servicio(
       id: doc.id,
       titulo: data['titulo'] ?? 'Sin título',
@@ -123,5 +123,19 @@ class Servicio {
   String get infoCalificaciones {
     if (totalCalificaciones == 0) return 'Sin calificaciones';
     return '$promedioFormateado ($totalCalificaciones ${totalCalificaciones == 1 ? 'reseña' : 'reseñas'})';
+  }
+
+  static Future<List<Servicio>> obtenerServiciosPorUsuario(
+    String idusuario,
+  ) async {
+    // Simulación de acceso a BD (Firebase, SQLite, etc.)
+    // Asegúrate de filtrar por idUsuario
+    final snapshot =
+        await FirebaseFirestore.instance
+            .collection('servicios')
+            .where('idUsuario', isEqualTo: idusuario)
+            .get();
+
+    return snapshot.docs.map((doc) => Servicio.fromFirestore(doc)).toList();
   }
 }

@@ -13,6 +13,7 @@ import 'Services/limpieza_page.dart';
 import 'Services/vehiculos_page.dart';
 import 'Services/salud_page.dart';
 import 'Services/servicios_generales_page.dart';
+import 'package:serviapp/vista/Services/todo.dart';
 
 class HomePage extends StatefulWidget {
   @override
@@ -46,16 +47,24 @@ class _HomePageState extends State<HomePage> {
       appBar: AppBar(
         title: const Text('Página Principal'),
         actions: [
+          TextButton.icon(
+            icon: const Icon(Icons.flash_on, color: Colors.black),
+            label: const Text(
+              'Solicitud Rápida',
+              style: TextStyle(color: Colors.black),
+            ),
+            onPressed: () {
+              _mostrarFormularioRapido(context);
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.logout),
             onPressed: () => _logout(context),
           ),
         ],
       ),
-      body: IndexedStack(
-        index: _selectedIndex,
-        children: _pages,
-      ),
+
+      body: IndexedStack(index: _selectedIndex, children: _pages),
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _selectedIndex,
         onTap: _onItemTapped,
@@ -70,6 +79,226 @@ class _HomePageState extends State<HomePage> {
         ],
       ),
     );
+  }
+}
+
+void _mostrarFormularioRapido(BuildContext context) {
+  String? categoriaSeleccionada;
+  String? subcategoriaSeleccionada;
+
+  showModalBottomSheet(
+    context: context,
+    isScrollControlled: true,
+    backgroundColor: Colors.transparent, // fondo transparente para el modal
+    builder: (context) {
+      return DraggableScrollableSheet(
+        initialChildSize: 0.5,
+        minChildSize: 0.3,
+        maxChildSize: 0.8,
+        expand: false,
+        builder: (_, scrollController) {
+          return Container(
+            padding: EdgeInsets.only(
+              bottom: MediaQuery.of(context).viewInsets.bottom,
+              left: 24,
+              right: 24,
+              top: 24,
+            ),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+            ),
+            child: StatefulBuilder(
+              builder: (context, setState) {
+                List<String> subcategorias =
+                    categoriaSeleccionada == null
+                        ? []
+                        : obtenerSubcategorias(categoriaSeleccionada!);
+
+                return SingleChildScrollView(
+                  controller: scrollController,
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Solicitud rápida',
+                        style: TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      SizedBox(height: 20),
+                      DropdownButtonFormField<String>(
+                        decoration: InputDecoration(labelText: 'Categoría'),
+                        value: categoriaSeleccionada,
+                        items:
+                            categorias.map((cat) {
+                              return DropdownMenuItem(
+                                value: cat,
+                                child: Text(cat),
+                              );
+                            }).toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            categoriaSeleccionada = value;
+                            subcategoriaSeleccionada = null;
+                          });
+                        },
+                      ),
+                      SizedBox(height: 16),
+                      DropdownButtonFormField<String>(
+                        decoration: InputDecoration(labelText: 'Subcategoría'),
+                        value: subcategoriaSeleccionada,
+                        items:
+                            subcategorias.map((sub) {
+                              return DropdownMenuItem(
+                                value: sub,
+                                child: Text(sub),
+                              );
+                            }).toList(),
+                        onChanged: (value) {
+                          setState(() {
+                            subcategoriaSeleccionada = value;
+                          });
+                        },
+                      ),
+                      SizedBox(height: 24),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            child: Text('Cancelar'),
+                          ),
+                          ElevatedButton(
+                            onPressed: () {
+                              if (categoriaSeleccionada != null &&
+                                  subcategoriaSeleccionada != null) {
+                                Navigator.of(context).pop();
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder:
+                                        (context) => HistorialSolicitudesPage(
+                                          subcategoria:
+                                              subcategoriaSeleccionada!,
+                                        ),
+                                  ),
+                                );
+                              } else {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      'Por favor selecciona ambas opciones.',
+                                    ),
+                                  ),
+                                );
+                              }
+                            },
+                            child: Text('Aceptar'),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 10),
+                    ],
+                  ),
+                );
+              },
+            ),
+          );
+        },
+      );
+    },
+  );
+}
+
+final List<String> categorias = [
+  'Tecnologia',
+  'Vehículos',
+  'Eventos',
+  'Estetica',
+  'Salud y Bienestar',
+  'Servicios Generales',
+  'Educacion',
+  'Limpieza',
+];
+
+List<String> obtenerSubcategorias(String categoria) {
+  switch (categoria) {
+    case 'Tecnologia':
+      return [
+        'Reparación de computadoras y laptops',
+        'Soporte técnico',
+        'Instalación de software',
+        'Redes y conectividad',
+        'Reparación de celulares',
+        'Diseño web',
+      ];
+    case 'Vehículos':
+      return [
+        'Mecánica general',
+        'Electricidad automotriz',
+        'Planchado y pintura',
+        'Cambio de aceite',
+        'Lavado de autos',
+        'Servicio de grúa',
+      ];
+    case 'Eventos':
+      return [
+        'Organización de eventos',
+        'Catering',
+        'Fotografía y video',
+        'Animación',
+        'Decoración',
+        'DJ y sonido',
+      ];
+    case 'Estetica':
+      return [
+        'Corte de cabello',
+        'Manicure y pedicure',
+        'Maquillaje',
+        'Tratamientos faciales',
+        'Depilación',
+        'Masajes',
+      ];
+    case 'Salud y Bienestar':
+      return [
+        'Enfermería a domicilio',
+        'Fisioterapia',
+        'Nutrición',
+        'Psicología',
+        'Entrenamiento personal',
+        'Yoga y meditación',
+      ];
+    case 'Servicios Generales':
+      return [
+        'Electricidad',
+        'Gasfitería',
+        'Carpintería',
+        'Albañilería',
+        'Pintura',
+        'Cerrajería',
+      ];
+    case 'Educacion':
+      return [
+        'Clases particulares',
+        'Idiomas',
+        'Música',
+        'Arte',
+        'Apoyo escolar',
+        'Preparación universitaria',
+      ];
+    case 'Limpieza':
+      return [
+        'Limpieza de hogares',
+        'Limpieza de oficinas',
+        'Lavado de muebles',
+        'Lavandería',
+        'Fumigación',
+        'Jardinería',
+      ];
+    default:
+      return [];
   }
 }
 
@@ -89,7 +318,10 @@ class _HomeContent extends StatelessWidget {
     );
   }
 
-  Widget _buildCategoriesGrid(List<Categoria> categorias, BuildContext context) {
+  Widget _buildCategoriesGrid(
+    List<Categoria> categorias,
+    BuildContext context,
+  ) {
     return Padding(
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -97,9 +329,7 @@ class _HomeContent extends StatelessWidget {
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text('Categorías', style: kTitleStyle),
-            ],
+            children: [Text('Categorías', style: kTitleStyle)],
           ),
           const SizedBox(height: 12),
           GridView.builder(
@@ -132,10 +362,7 @@ class _HomeContent extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('Servicios populares', style: kTitleStyle),
-              TextButton(
-                onPressed: () {},
-                child: const Text('Ver todos'),
-              ),
+              TextButton(onPressed: () {}, child: const Text('Ver todos')),
             ],
           ),
           const SizedBox(height: 12),
@@ -179,11 +406,7 @@ class _CategoryItem extends StatelessWidget {
                 ],
               ),
               child: Center(
-                child: Icon(
-                  categoria.icon,
-                  color: Colors.white,
-                  size: 30,
-                ),
+                child: Icon(categoria.icon, color: Colors.white, size: 30),
               ),
             ),
           ),

@@ -22,9 +22,6 @@ class _EditarPerfilUsuarioPageState extends State<EditarPerfilUsuarioPage> {
   late TextEditingController _dniController;
   late TextEditingController _celularController;
   late TextEditingController _rolController;
-  late TextEditingController _tipoTrabajoController;
-
-  late bool _esProveedor;
 
   @override
   void initState() {
@@ -33,11 +30,6 @@ class _EditarPerfilUsuarioPageState extends State<EditarPerfilUsuarioPage> {
     _dniController = TextEditingController(text: widget.usuario.dni);
     _celularController = TextEditingController(text: widget.usuario.celular);
     _rolController = TextEditingController(text: widget.usuario.rol);
-    _tipoTrabajoController = TextEditingController(
-      text: widget.usuario.tipoTrabajo?.join(', ') ?? '',
-    );
-
-    _esProveedor = widget.usuario.rol.toLowerCase() == 'proveedor';
   }
 
   @override
@@ -46,7 +38,6 @@ class _EditarPerfilUsuarioPageState extends State<EditarPerfilUsuarioPage> {
     _dniController.dispose();
     _celularController.dispose();
     _rolController.dispose();
-    _tipoTrabajoController.dispose();
     super.dispose();
   }
 
@@ -58,12 +49,7 @@ class _EditarPerfilUsuarioPageState extends State<EditarPerfilUsuarioPage> {
         dni: _dniController.text,
         celular: _celularController.text,
         rol: _rolController.text,
-        tipoTrabajo:
-            _tipoTrabajoController.text
-                .split(',')
-                .map((e) => e.trim())
-                .where((e) => e.isNotEmpty)
-                .toList(),
+        tipoTrabajo: [], // eliminado el tipo de trabajo
         email: widget.usuario.email,
         password: widget.usuario.password,
       );
@@ -142,18 +128,6 @@ class _EditarPerfilUsuarioPageState extends State<EditarPerfilUsuarioPage> {
                 decoration: Estilos.inputDecoration.copyWith(labelText: 'Rol'),
                 readOnly: true,
               ),
-
-              if (_esProveedor) ...[
-                const SizedBox(height: 12),
-                TextFormField(
-                  controller: _tipoTrabajoController,
-                  decoration: Estilos.inputDecoration.copyWith(
-                    labelText: 'Tipo de trabajo',
-                  ),
-                  readOnly: true,
-                ),
-              ],
-
               const SizedBox(height: 20),
 
               ElevatedButton(

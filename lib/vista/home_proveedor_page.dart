@@ -15,6 +15,7 @@ import 'Services/salud_page.dart';
 import 'Services/servicios_generales_page.dart';
 import 'package:serviapp/styles/home_proveedor_styles.dart';
 import 'package:serviapp/vista/Proveedor/agregar_servicio_page.dart';
+import 'package:serviapp/vista/Proveedor/solicitudes_prov_page.dart';
 import 'dart:async';
 
 class HomeProveedorPage extends StatefulWidget {
@@ -425,7 +426,7 @@ class _HomeProveedorPageState extends State<HomeProveedorPage> {
         ],
       ),
       Center(child: Text('Mis Servicios')),
-      Center(child: Text('Solicitudes')),
+      SolicitudesPage(),
       PerfilUsuarioPage(),
     ];
 
