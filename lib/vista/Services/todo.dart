@@ -289,11 +289,8 @@ class _TodoPageState extends State<TodoPage> {
           padding: const EdgeInsets.symmetric(vertical: 8.0),
           child: Column(
             children: [
-              // Aquí el ListView debe estar dentro de un SizedBox con altura limitada para evitar conflicto de scroll
               SizedBox(
-                height:
-                    MediaQuery.of(context).size.height *
-                    0.5, // o el tamaño que prefieras
+                height: MediaQuery.of(context).size.height * 0.5,
                 child: StreamBuilder<QuerySnapshot>(
                   stream:
                       FirebaseFirestore.instance
@@ -334,6 +331,61 @@ class _TodoPageState extends State<TodoPage> {
     );
   }
 
+  Future<void> _crearSolicitudAceptadaDesdeServicio(String idServicio) async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return;
+
+    // Obtener datos del cliente
+    final userDoc =
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(currentUser.uid)
+            .get();
+
+    final nombreCliente = userDoc.data()?['nombre'] ?? '';
+    final uidSolicitud = const Uuid().v4();
+
+    try {
+      // Obtener los datos del servicio seleccionado
+      final servicioDoc =
+          await FirebaseFirestore.instance
+              .collection('servicios')
+              .doc(idServicio)
+              .get();
+
+      if (!servicioDoc.exists) {
+        print('⚠️ El servicio con ID $idServicio no existe.');
+        return;
+      }
+
+      final data = servicioDoc.data()!;
+      final proveedorId = data['idusuario'];
+      final subcategoria = data['subcategoria'];
+
+      print('➡️ Servicio seleccionado: $idServicio');
+      print('➡️ Proveedor ID: $proveedorId');
+
+      // Crear notificación
+      await FirebaseFirestore.instance
+          .collection('notificaciones')
+          .doc(uidSolicitud)
+          .set({
+            'id': uidSolicitud,
+            'clienteId': currentUser.uid,
+            'nombreCliente': nombreCliente,
+            'proveedorId': proveedorId,
+            'estado': 'aceptado',
+            'etapa': '',
+            'subcategoria': subcategoria,
+            'timestamp': FieldValue.serverTimestamp(),
+          });
+
+      print('✅ Solicitud creada desde publicación $idServicio');
+    } catch (e) {
+      print('❌ Error al crear la solicitud: $e');
+    }
+  }
+
   Widget _buildServiceCard(BuildContext context, Servicio servicio) {
     return Card(
       elevation: 4,
@@ -367,52 +419,39 @@ class _TodoPageState extends State<TodoPage> {
             ),
             const SizedBox(height: 12),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Expanded(
-                  child: InkWell(
-                    onTap: () => _makePhoneCall(servicio.telefono),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      decoration: BoxDecoration(
-                        color: Colors.blue,
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          const Icon(
-                            Icons.phone,
-                            color: Colors.white,
-                            size: 20,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            servicio.telefono,
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                      ),
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      await _crearSolicitudAceptadaDesdeServicio(servicio.id);
+                      final Uri uri = Uri(
+                        scheme: 'tel',
+                        path: servicio.telefono,
+                      );
+                      launchUrl(uri);
+                    },
+                    icon: const Icon(Icons.phone),
+                    label: const Text('Llamar'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blue,
                     ),
                   ),
                 ),
                 const SizedBox(width: 8),
-                InkWell(
-                  onTap: () => _openWhatsApp(servicio.telefono),
-                  child: Container(
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF25D366),
-                      borderRadius: BorderRadius.circular(8),
-                    ),
-                    child: const FaIcon(
-                      FontAwesomeIcons.whatsapp,
-                      color: Colors.white,
-                      size: 24,
-                    ),
+                ElevatedButton.icon(
+                  onPressed: () async {
+                    await _crearSolicitudAceptadaDesdeServicio(servicio.id);
+                    final formatted = servicio.telefono.replaceAll(
+                      RegExp(r'[^0-9]'),
+                      '',
+                    );
+                    final Uri uri = Uri.parse('https://wa.me/51$formatted');
+                    launchUrl(uri, mode: LaunchMode.externalApplication);
+                  },
+                  icon: const FaIcon(FontAwesomeIcons.whatsapp),
+                  label: const Text('WhatsApp'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF25D366),
                   ),
                 ),
               ],
