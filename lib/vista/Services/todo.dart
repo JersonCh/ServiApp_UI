@@ -284,49 +284,36 @@ class _TodoPageState extends State<TodoPage> {
     return Scaffold(
       backgroundColor: ServiciosStyles.backgroundColor,
       appBar: AppBar(title: Text(widget.subcategoria), centerTitle: true),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 8.0),
-          child: Column(
-            children: [
-              SizedBox(
-                height: MediaQuery.of(context).size.height * 0.5,
-                child: StreamBuilder<QuerySnapshot>(
-                  stream:
-                      FirebaseFirestore.instance
-                          .collection('servicios')
-                          .where('subcategoria', isEqualTo: widget.subcategoria)
-                          .where('estado', isEqualTo: "true")
-                          .snapshots(),
-                  builder: (context, snapshot) {
-                    if (snapshot.hasError) {
-                      return Center(child: Text('Error: ${snapshot.error}'));
-                    }
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    }
-                    if (snapshot.data!.docs.isEmpty) {
-                      return const Center(
-                        child: Text('No hay servicios disponibles'),
-                      );
-                    }
-                    return ListView.separated(
-                      padding: const EdgeInsets.all(16),
-                      itemCount: snapshot.data!.docs.length,
-                      separatorBuilder:
-                          (context, index) => const SizedBox(height: 12),
-                      itemBuilder: (context, index) {
-                        final doc = snapshot.data!.docs[index];
-                        final servicio = Servicio.fromFirestore(doc);
-                        return _buildServiceCard(context, servicio);
-                      },
-                    );
-                  },
-                ),
-              ),
-            ],
-          ),
-        ),
+      body: StreamBuilder<QuerySnapshot>(
+        stream:
+            FirebaseFirestore.instance
+                .collection('servicios')
+                .where('subcategoria', isEqualTo: widget.subcategoria)
+                .where('estado', isEqualTo: "true")
+                .snapshots(),
+        builder: (context, snapshot) {
+          if (snapshot.hasError) {
+            return Center(child: Text('Error: ${snapshot.error}'));
+          }
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
+          if (snapshot.data!.docs.isEmpty) {
+            return const Center(
+              child: Text('No hay servicios disponibles'),
+            );
+          }
+          return ListView.separated(
+            padding: const EdgeInsets.all(16),
+            itemCount: snapshot.data!.docs.length,
+            separatorBuilder: (context, index) => const SizedBox(height: 12),
+            itemBuilder: (context, index) {
+              final doc = snapshot.data!.docs[index];
+              final servicio = Servicio.fromFirestore(doc);
+              return _buildServiceCard(context, servicio);
+            },
+          );
+        },
       ),
     );
   }
@@ -387,79 +374,245 @@ class _TodoPageState extends State<TodoPage> {
   }
 
   Widget _buildServiceCard(BuildContext context, Servicio servicio) {
-    return Card(
-      elevation: 4,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+    return FutureBuilder<Map<String, dynamic>>(
+      future: _getProviderDataAndRating(servicio.idusuario),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Card(
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: Center(child: CircularProgressIndicator()),
+            ),
+          );
+        }
+
+        final providerData = snapshot.data ?? {};
+        final String nombreProveedor = providerData['nombre'] ?? 'Proveedor';
+        final String ubicacionProveedor = providerData['ubicacion'] ?? 'Sin ubicación';
+        final String fotoPerfilUrl = providerData['fotoPerfil'] ?? '';
+        final double promedioCalificaciones = providerData['promedioCalificaciones'] ?? 0.0;
+        final int totalCalificaciones = providerData['totalCalificaciones'] ?? 0;
+        final String imagenServicioUrl = providerData['imagenServicio'] ?? '';
+
+        return Card(
+          elevation: 4,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        servicio.titulo,
-                        style: const TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
+                // Header con foto de perfil, nombre y calificación
+                Row(
+                  children: [
+                    // Foto de perfil
+                    Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(color: Colors.grey.shade300, width: 1),
                       ),
-                      const SizedBox(height: 8),
-                      Text(servicio.descripcion),
-                    ],
+                      child: ClipOval(
+                        child: fotoPerfilUrl.isNotEmpty
+                            ? Image.network(
+                                fotoPerfilUrl,
+                                fit: BoxFit.cover,
+                                errorBuilder: (context, error, stackTrace) {
+                                  return const Icon(Icons.person, size: 30, color: Colors.grey);
+                                },
+                              )
+                            : const Icon(Icons.person, size: 30, color: Colors.grey),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Nombre del proveedor
+                          Text(
+                            nombreProveedor,
+                            style: const TextStyle(
+                              fontSize: 16,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          // Calificación
+                          Row(
+                            children: [
+                              const Icon(Icons.star, color: Colors.amber, size: 16),
+                              const SizedBox(width: 4),
+                              Text(
+                                '${promedioCalificaciones.toStringAsFixed(1)} ($totalCalificaciones)',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                            ],
+                          ),
+                          // Ubicación
+                          Text(
+                            'Ubicación: $ubicacionProveedor',
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: Colors.grey,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+                
+                const Divider(height: 20),
+                
+                // Título del servicio
+                Text(
+                  servicio.titulo,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                _buildRatingSection(servicio),
-              ],
-            ),
-            const SizedBox(height: 12),
-            Row(
-              children: [
-                Expanded(
-                  child: ElevatedButton.icon(
-                    onPressed: () async {
-                      await _crearSolicitudAceptadaDesdeServicio(servicio.id);
-                      final Uri uri = Uri(
-                        scheme: 'tel',
-                        path: servicio.telefono,
-                      );
-                      launchUrl(uri);
-                    },
-                    icon: const Icon(Icons.phone),
-                    label: const Text('Llamar'),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue,
+                const SizedBox(height: 8),
+                
+                // Imagen del servicio (si existe)
+                if (imagenServicioUrl.isNotEmpty) ...[
+                  Container(
+                    width: double.infinity,
+                    height: 150,
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.grey.shade300),
+                    ),
+                    child: ClipRRect(
+                      borderRadius: BorderRadius.circular(8),
+                      child: Image.network(
+                        imagenServicioUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(
+                            color: Colors.grey.shade200,
+                            child: const Icon(Icons.image_not_supported, size: 50, color: Colors.grey),
+                          );
+                        },
+                      ),
                     ),
                   ),
+                  const SizedBox(height: 8),
+                ],
+                
+                // Descripción del servicio
+                Text(
+                  servicio.descripcion,
+                  style: const TextStyle(fontSize: 14, color: Colors.grey),
+                  maxLines: 3,
+                  overflow: TextOverflow.ellipsis,
                 ),
-                const SizedBox(width: 8),
-                ElevatedButton.icon(
-                  onPressed: () async {
-                    await _crearSolicitudAceptadaDesdeServicio(servicio.id);
-                    final formatted = servicio.telefono.replaceAll(
-                      RegExp(r'[^0-9]'),
-                      '',
-                    );
-                    final Uri uri = Uri.parse('https://wa.me/51$formatted');
-                    launchUrl(uri, mode: LaunchMode.externalApplication);
-                  },
-                  icon: const FaIcon(FontAwesomeIcons.whatsapp),
-                  label: const Text('WhatsApp'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF25D366),
-                  ),
+                const SizedBox(height: 12),
+                
+                // Botones de acción
+                Row(
+                  children: [
+                    Expanded(
+                      child: ElevatedButton.icon(
+                        onPressed: () async {
+                          await _crearSolicitudAceptadaDesdeServicio(servicio.id);
+                          final Uri uri = Uri(
+                            scheme: 'tel',
+                            path: servicio.telefono,
+                          );
+                          launchUrl(uri);
+                        },
+                        icon: const Icon(Icons.phone),
+                        label: const Text('Llamar'),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue,
+                          foregroundColor: Colors.white,
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    ElevatedButton.icon(
+                      onPressed: () async {
+                        await _crearSolicitudAceptadaDesdeServicio(servicio.id);
+                        final formatted = servicio.telefono.replaceAll(
+                          RegExp(r'[^0-9]'),
+                          '',
+                        );
+                        final Uri uri = Uri.parse('https://wa.me/51$formatted');
+                        launchUrl(uri, mode: LaunchMode.externalApplication);
+                      },
+                      icon: const FaIcon(FontAwesomeIcons.whatsapp),
+                      label: const Text('WhatsApp'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF25D366),
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  ],
                 ),
               ],
             ),
-          ],
-        ),
-      ),
+          ),
+        );
+      },
     );
+  }
+
+  Future<Map<String, dynamic>> _getProviderDataAndRating(String proveedorId) async {
+    final Map<String, dynamic> result = {};
+    
+    try {
+      // Obtener datos del proveedor
+      final proveedorDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(proveedorId)
+          .get();
+      
+      if (proveedorDoc.exists) {
+        final data = proveedorDoc.data()!;
+        result['nombre'] = data['nombre'] ?? 'Proveedor';
+        result['ubicacion'] = data['ubicacion'] ?? 'Sin ubicación';
+        result['fotoPerfil'] = data['fotoPerfil'] ?? '';
+        result['imagenServicio'] = data['imagenServicio'] ?? '';
+      }
+      
+      // Obtener calificaciones del proveedor
+      final calificacionesSnapshot = await FirebaseFirestore.instance
+          .collection('calificaciones')
+          .where('proveedorId', isEqualTo: proveedorId)
+          .get();
+      
+      if (calificacionesSnapshot.docs.isNotEmpty) {
+        double sumaCalificaciones = 0.0;
+        int totalCalificaciones = calificacionesSnapshot.docs.length;
+        
+        for (var doc in calificacionesSnapshot.docs) {
+          final data = doc.data();
+          sumaCalificaciones += (data['puntuacion'] ?? 0.0).toDouble();
+        }
+        
+        result['promedioCalificaciones'] = sumaCalificaciones / totalCalificaciones;
+        result['totalCalificaciones'] = totalCalificaciones;
+      } else {
+        result['promedioCalificaciones'] = 0.0;
+        result['totalCalificaciones'] = 0;
+      }
+      
+    } catch (e) {
+      print('Error obteniendo datos del proveedor: $e');
+      result['nombre'] = 'Proveedor';
+      result['ubicacion'] = 'Sin ubicación';
+      result['fotoPerfil'] = '';
+      result['imagenServicio'] = '';
+      result['promedioCalificaciones'] = 0.0;
+      result['totalCalificaciones'] = 0;
+    }
+    
+    return result;
   }
 
   Widget _buildRatingSection(Servicio servicio) {

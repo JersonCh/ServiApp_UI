@@ -56,6 +56,7 @@ class HomeController {
         descripcion: 'Servicio técnico especializado',
         telefono: '+123456789',
         subcategoria: 'Tecnologia',
+        idusuario: 'proveedor123', // ID del proveedor
         sumaCalificaciones: 576.0, // 4.8 * 120
         totalCalificaciones: 120,
         icon: Icons.computer,
@@ -67,6 +68,7 @@ class HomeController {
         descripcion: 'Limpieza profesional',
         telefono: '+987654321',
         subcategoria: 'Limpieza',
+        idusuario: 'proveedor456', // ID del proveedor
         sumaCalificaciones: 399.5, // 4.7 * 85
         totalCalificaciones: 85,
         icon: Icons.cleaning_services,
@@ -78,6 +80,7 @@ class HomeController {
         descripcion: 'Servicio 24/7',
         telefono: '+112233445',
         subcategoria: 'Servicios Generales',
+        idusuario: 'proveedor789', // ID del proveedor
         sumaCalificaciones: 1029.0, // 4.9 * 210
         totalCalificaciones: 210,
         icon: Icons.plumbing,
@@ -106,6 +109,7 @@ class HomeController {
         descripcion: servicio.descripcion,
         telefono: servicio.telefono,
         subcategoria: servicio.subcategoria,
+        idusuario: servicio.idusuario,
         sumaCalificaciones: servicio.sumaCalificaciones + calificacion,
         totalCalificaciones: servicio.totalCalificaciones + 1,
         icon: servicio.icon,
@@ -128,5 +132,18 @@ class HomeController {
             servicio.titulo.toLowerCase().contains(query.toLowerCase()) ||
             servicio.descripcion.toLowerCase().contains(query.toLowerCase()))
         .toList();
+  }
+
+  // Método para obtener servicios por proveedor
+  List<Servicio> obtenerServiciosPorProveedor(String proveedorId) {
+    return obtenerServiciosPopulares()
+        .where((servicio) => servicio.idusuario == proveedorId)
+        .toList();
+  }
+
+  // Método para validar si un proveedor tiene servicios
+  bool proveedorTieneServicios(String proveedorId) {
+    return obtenerServiciosPopulares()
+        .any((servicio) => servicio.idusuario == proveedorId);
   }
 }

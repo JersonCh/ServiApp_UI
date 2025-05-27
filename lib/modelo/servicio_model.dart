@@ -7,6 +7,7 @@ class Servicio {
   final String descripcion;
   final String telefono;
   final String subcategoria;
+  final String idusuario; // Nuevo campo para el ID del proveedor
   final double sumaCalificaciones;
   final int totalCalificaciones;
   final IconData icon;
@@ -19,6 +20,7 @@ class Servicio {
     required this.descripcion,
     required this.telefono,
     required this.subcategoria,
+    required this.idusuario,
     required this.sumaCalificaciones,
     required this.totalCalificaciones,
     required this.icon,
@@ -41,6 +43,7 @@ class Servicio {
       descripcion: data['descripcion'] ?? '',
       telefono: data['telefono'] ?? '',
       subcategoria: data['subcategoria'] ?? 'General',
+      idusuario: data['idusuario'] ?? '', // Campo del proveedor
       sumaCalificaciones: (data['sumaCalificaciones'] ?? 0.0).toDouble(),
       totalCalificaciones: data['totalCalificaciones'] ?? 0,
       icon: _parseIconData(data['icon'] ?? ''),
@@ -64,6 +67,7 @@ class Servicio {
       'descripcion': descripcion,
       'telefono': telefono,
       'subcategoria': subcategoria,
+      'idusuario': idusuario,
       'sumaCalificaciones': sumaCalificaciones,
       'totalCalificaciones': totalCalificaciones,
       'icon': _iconToString(icon),
@@ -79,6 +83,11 @@ class Servicio {
       'plumbing': Icons.plumbing,
       'repair': Icons.build,
       'event': Icons.event,
+      'spa': Icons.spa,
+      'favorite': Icons.favorite,
+      'school': Icons.school,
+      'directions_car': Icons.directions_car,
+      'devices': Icons.devices,
       // Añade más mapeos según necesites
     };
     return iconMap[iconName.toLowerCase()] ?? Icons.help_outline;
@@ -91,6 +100,9 @@ class Servicio {
       'green': Colors.green,
       'teal': Colors.teal,
       'indigo': Colors.indigo,
+      'purple': Colors.purple,
+      'pink': Colors.pink,
+      'amber': Colors.amber,
       // Añade más colores según necesites
     };
     return colorMap[colorValue.toLowerCase()] ?? Colors.grey;
@@ -101,6 +113,13 @@ class Servicio {
       Icons.computer: 'computer',
       Icons.cleaning_services: 'cleaning',
       Icons.plumbing: 'plumbing',
+      Icons.build: 'repair',
+      Icons.event: 'event',
+      Icons.spa: 'spa',
+      Icons.favorite: 'favorite',
+      Icons.school: 'school',
+      Icons.directions_car: 'directions_car',
+      Icons.devices: 'devices',
       // Añade más mapeos inversos
     };
     return iconMap[icon] ?? 'help';
@@ -111,6 +130,11 @@ class Servicio {
       Colors.blue: 'blue',
       Colors.red: 'red',
       Colors.green: 'green',
+      Colors.teal: 'teal',
+      Colors.indigo: 'indigo',
+      Colors.purple: 'purple',
+      Colors.pink: 'pink',
+      Colors.amber: 'amber',
       // Añade más mapeos inversos
     };
     return colorMap[color] ?? 'grey';
@@ -133,9 +157,84 @@ class Servicio {
     final snapshot =
         await FirebaseFirestore.instance
             .collection('servicios')
-            .where('idUsuario', isEqualTo: idusuario)
+            .where('idusuario', isEqualTo: idusuario)
             .get();
 
     return snapshot.docs.map((doc) => Servicio.fromFirestore(doc)).toList();
+  }
+
+  // Método para obtener las calificaciones reales del proveedor desde Firestore
+  static Future<Map<String, double>> obtenerCalificacionesProveedor(
+    String proveedorId,
+  ) async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('calificaciones')
+          .where('proveedorId', isEqualTo: proveedorId)
+          .get();
+
+      if (snapshot.docs.isEmpty) {
+        return {'promedio': 0.0, 'total': 0.0};
+      }
+
+      double sumaCalificaciones = 0.0;
+      int totalCalificaciones = snapshot.docs.length;
+
+      for (var doc in snapshot.docs) {
+        final data = doc.data();
+        sumaCalificaciones += (data['puntuacion'] ?? 0.0).toDouble();
+      }
+
+      final promedio = sumaCalificaciones / totalCalificaciones;
+
+      return {
+        'promedio': promedio,
+        'total': totalCalificaciones.toDouble(),
+      };
+    } catch (e) {
+      print('Error obteniendo calificaciones: $e');
+      return {'promedio': 0.0, 'total': 0.0};
+    }
+  }
+
+  // Método para obtener datos completos del proveedor incluyendo calificaciones
+  static Future<Map<String, dynamic>> obtenerDatosCompletosProveedor(
+    String proveedorId,
+  ) async {
+    final Map<String, dynamic> resultado = {};
+    
+    try {
+      // Obtener datos del usuario proveedor
+      final proveedorDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(proveedorId)
+          .get();
+      
+      if (proveedorDoc.exists) {
+        final data = proveedorDoc.data()!;
+        resultado['nombre'] = data['nombre'] ?? 'Proveedor';
+        resultado['ubicacion'] = data['ubicacion'] ?? 'Sin ubicación';
+        resultado['fotoPerfil'] = data['fotoPerfil'] ?? '';
+        resultado['imagenServicio'] = data['imagenServicio'] ?? '';
+        resultado['celular'] = data['celular'] ?? '';
+      }
+      
+      // Obtener calificaciones
+      final calificaciones = await obtenerCalificacionesProveedor(proveedorId);
+      resultado['promedioCalificaciones'] = calificaciones['promedio'];
+      resultado['totalCalificaciones'] = calificaciones['total']?.toInt() ?? 0;
+      
+    } catch (e) {
+      print('Error obteniendo datos completos del proveedor: $e');
+      resultado['nombre'] = 'Proveedor';
+      resultado['ubicacion'] = 'Sin ubicación';
+      resultado['fotoPerfil'] = '';
+      resultado['imagenServicio'] = '';
+      resultado['celular'] = '';
+      resultado['promedioCalificaciones'] = 0.0;
+      resultado['totalCalificaciones'] = 0;
+    }
+    
+    return resultado;
   }
 }
