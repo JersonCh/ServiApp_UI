@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:serviapp/modelo/global_user.dart';
+import 'editar_servicio_page.dart';
 
 class MisServiciosPage extends StatefulWidget {
   const MisServiciosPage({Key? key}) : super(key: key);
@@ -495,8 +496,15 @@ class _MisServiciosPageState extends State<MisServiciosPage> {
                     Expanded(
                       child: ElevatedButton.icon(
                         onPressed: () {
-                          // Implementar navegación a editar
-                          print('Editar servicio: ${servicio['id']}');
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => EditarServicioPage(servicio: servicio),
+                            ),
+                          ).then((_) {
+                            // Recargar la lista cuando regrese de editar
+                            _cargarServicios();
+                          });
                         },
                         icon: Icon(Icons.edit, size: 18),
                         label: Text('Editar'),

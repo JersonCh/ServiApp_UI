@@ -79,7 +79,7 @@ class ServicioController {
       case 'Tecnologia':
         return [
           'Reparación de computadoras y laptops',
-          'Soporte técnico',
+          'Mantenimiento',
           'Instalación de software',
           'Redes y conectividad',
           'Reparación de celulares',
@@ -87,66 +87,58 @@ class ServicioController {
         ];
       case 'Vehículos':
         return [
-          'Mecánica general',
-          'Electricidad automotriz',
-          'Planchado y pintura',
-          'Cambio de aceite',
-          'Lavado de autos',
+          'Mecánica automotriz',
+          'Lavado y detallado de autos',
+          'Cambio de llantas y baterías',
           'Servicio de grúa',
+          'Transporte y mudanzas',
+          'Lubricentro',
         ];
       case 'Eventos':
         return [
+          'Fotografía y filmación',
           'Organización de eventos',
-          'Catering',
-          'Fotografía y video',
-          'Animación',
-          'Decoración',
-          'DJ y sonido',
+          'Catering y banquetes',
+          'Música en vivo y DJ',
         ];
       case 'Estetica':
         return [
-          'Corte de cabello',
+          'Peluquería y barbería a domicilio',
           'Manicure y pedicure',
-          'Maquillaje',
-          'Tratamientos faciales',
-          'Depilación',
-          'Masajes',
+          'Maquillaje y asesoría de imagen',
         ];
       case 'Salud y Bienestar':
         return [
-          'Enfermería a domicilio',
-          'Fisioterapia',
-          'Nutrición',
-          'Psicología',
-          'Entrenamiento personal',
-          'Yoga y meditación',
+          'Consulta médica a domicilio',
+          'Enfermería y cuidados a domicilio',
+          'Terapia física y rehabilitación',
+          'Masajes y relajación',
+          'Entrenador personal',
         ];
       case 'Servicios Generales':
         return [
+          'Albañileria',
+          'Plomeria',
           'Electricidad',
-          'Gasfitería',
-          'Carpintería',
-          'Albañilería',
-          'Pintura',
-          'Cerrajería',
+          'Carpinteria',
+          'Pintura y acabados',
+          'Jardineria y paisajismo',
         ];
       case 'Educacion':
         return [
           'Clases particulares',
-          'Idiomas',
-          'Música',
-          'Arte',
-          'Apoyo escolar',
-          'Preparación universitaria',
+          'Tutoriales en linea',
+          'Capacitación en software',
+          'Programas académicos',
+          'Cursos y Certificaciones',
+          'Vacaciones útiles',
         ];
       case 'Limpieza':
         return [
-          'Limpieza de hogares',
-          'Limpieza de oficinas',
-          'Lavado de muebles',
-          'Lavandería',
-          'Fumigación',
-          'Jardinería',
+          'Limpieza del hogar y oficinas',
+          'Lavanderia y el planchado',
+          'Desinfeccion',
+          'Encerado y pulido de muebles',
         ];
       default:
         return [];
@@ -240,4 +232,74 @@ class ServicioController {
     final serviciosCalificados = List<String>.from(doc.data()?['serviciosCalificados'] ?? []);
     return serviciosCalificados.contains(servicioId);
   }
+
+  //Editar Proveedor
+
+  Future<bool> actualizarServicio({
+    required String servicioId,
+    required String titulo,
+    required String descripcion,
+    required String categoria,
+    required String subcategoria,
+    required String telefono,
+    required String ubicacion,
+    File? imagenFile,
+    String? imagenUrlOriginal,
+  }) async {
+    try {
+      // Preparar los datos a actualizar
+      Map<String, dynamic> datosActualizados = {
+        'titulo': titulo.trim(),
+        'descripcion': descripcion.trim(),
+        'categoria': categoria,
+        'subcategoria': subcategoria,
+        'telefono': telefono.trim(),
+        'ubicacion': ubicacion.trim(),
+        'fechaActualizacion': FieldValue.serverTimestamp(),
+      };
+
+      String? urlImagen;
+
+      // Si hay una nueva imagen, subirla
+      if (imagenFile != null) {
+        // Subir la nueva imagen
+        String fileName = 'servicio_${servicioId}_${DateTime.now().millisecondsSinceEpoch}.jpg';
+        Reference storageRef = FirebaseStorage.instance.ref().child('servicios/$fileName');
+        
+        UploadTask uploadTask = storageRef.putFile(imagenFile);
+        TaskSnapshot snapshot = await uploadTask;
+        urlImagen = await snapshot.ref.getDownloadURL();
+        
+        // Si había una imagen anterior, intentar eliminarla
+        if (imagenUrlOriginal != null && imagenUrlOriginal.isNotEmpty) {
+          try {
+            Reference imagenAnteriorRef = FirebaseStorage.instance.refFromURL(imagenUrlOriginal);
+            await imagenAnteriorRef.delete();
+          } catch (e) {
+            print('Error al eliminar imagen anterior: $e');
+            // No es crítico si no se puede eliminar la imagen anterior
+          }
+        }
+        
+        datosActualizados['imagen'] = urlImagen;
+      } else if (imagenUrlOriginal != null && imagenUrlOriginal.isNotEmpty) {
+        // Mantener la imagen original si no hay nueva imagen
+        datosActualizados['imagen'] = imagenUrlOriginal;
+      }
+
+      // Actualizar el documento en Firestore
+      await FirebaseFirestore.instance
+          .collection('servicios')
+          .doc(servicioId)
+          .update(datosActualizados);
+
+      print('Servicio actualizado exitosamente');
+      return true;
+
+    } catch (e) {
+      print('Error al actualizar servicio: $e');
+      return false;
+    }
+  }
+
 }

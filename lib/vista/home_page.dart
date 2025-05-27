@@ -13,6 +13,7 @@ import 'Services/limpieza_page.dart';
 import 'Services/vehiculos_page.dart';
 import 'Services/salud_page.dart';
 import 'Services/servicios_generales_page.dart';
+import 'Services/misfavoritos.dart';
 import 'package:serviapp/vista/Services/todo.dart';
 import 'package:serviapp/vista/Usuario/historial_solicitudes.dart';
 
@@ -29,7 +30,7 @@ class _HomePageState extends State<HomePage> {
   final List<Widget> _pages = [
     _HomeContent(),
     SolicitudesPage(),
-    Center(child: Text('Buscar')),
+    MisFavoritosPage(),
     PerfilUsuarioPage(),
   ];
 
@@ -78,7 +79,7 @@ class _HomePageState extends State<HomePage> {
             icon: Icon(Icons.explore),
             label: 'Historial',
           ),
-          BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Buscar'),
+          BottomNavigationBarItem(icon: Icon(Icons.star), label: 'Favoritos'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Perfil'),
         ],
       ),
