@@ -5,6 +5,7 @@ import 'package:serviapp/vista/Usuario/perfil_usuario.dart';
 import '../controlador/login_controller.dart';
 import '../controlador/home_controller.dart';
 import '../modelo/categoria_model.dart';
+import '../modelo/contacto_model.dart';
 import 'Services/tecnologia_page.dart';
 import 'Services/eventos_page.dart';
 import 'Services/belleza_page.dart';
@@ -17,6 +18,8 @@ import 'package:serviapp/styles/home_proveedor_styles.dart';
 import 'package:serviapp/vista/Proveedor/agregar_servicio_page.dart';
 import 'package:serviapp/vista/Proveedor/solicitudes_prov_page.dart';
 import 'dart:async';
+import 'package:fl_chart/fl_chart.dart';
+import 'Proveedor/mis_servicios.dart';
 
 class HomeProveedorPage extends StatefulWidget {
   @override
@@ -29,6 +32,7 @@ class _HomeProveedorPageState extends State<HomeProveedorPage> {
   StreamSubscription? _solicitudesSubscription;
 
   int _selectedIndex = 0;
+  int _mostrarCantidadCalificaciones = 3;
 
   // Aquí asigna tu proveedorId actual, puede venir de tu login o controlador
   final String? proveedorIdActual = GlobalUser.uid;
@@ -44,158 +48,686 @@ class _HomeProveedorPageState extends State<HomeProveedorPage> {
     setState(() => _selectedIndex = index);
   }
 
-  Widget _buildCategoriasServicios(List<Categoria> categorias) {
-    return Padding(
-      padding: const EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Align(
-            alignment: Alignment.centerRight,
-            child: ElevatedButton.icon(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => AgregarServicioPage(),
-                  ),
-                );
-              },
-              icon: Icon(Icons.add, color: Colors.white),
-              label: Text(
-                'Agregar servicio',
-                style: TextStyle(color: Colors.white),
+Widget _buildRendimientoDiario() {
+  return Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Rendimiento diario', style: HomeProveedorStyles.titleStyle),
+        SizedBox(height: 12),
+        Container(
+          height: 300,
+          decoration: HomeProveedorStyles.cardDecoration,
+          child: PageView(
+            children: [
+              _buildGraficoSolicitudes(),
+              _buildGraficoFinalizados(),
+            ],
+          ),
+        ),
+        SizedBox(height: 8),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.blue.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
               ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.blue,
-                padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+              child: Text(
+                'Desliza para ver trabajos finalizados →',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: Colors.blue[700],
+                  fontStyle: FontStyle.italic,
                 ),
               ),
             ),
-          ),
+          ],
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _buildGraficoSolicitudes() {
+  return Container(
+    decoration: BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Colors.blue.shade50, Colors.white],
+      ),
+      borderRadius: BorderRadius.circular(16),
+    ),
+    child: Padding(
+      padding: const EdgeInsets.all(20.0),
+      child: Column(
+        children: [
           Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(
-                'Mis servicios ofrecidos',
-                style: HomeProveedorStyles.titleStyle,
+              Container(
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade100,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(Icons.trending_up, color: Colors.blue.shade700, size: 24),
+              ),
+              SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Solicitudes recibidas',
+                    style: TextStyle(
+                      fontSize: 18, 
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey.shade800,
+                    ),
+                  ),
+                  Text(
+                    'Esta semana',
+                    style: TextStyle(
+                      fontSize: 14, 
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ],
               ),
             ],
           ),
-          SizedBox(height: 12),
-          GridView.builder(
-            shrinkWrap: true,
-            physics: NeverScrollableScrollPhysics(),
-            itemCount: categorias.length,
-            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-              crossAxisCount: 4,
-              mainAxisSpacing: 16,
-              crossAxisSpacing: 12,
-              childAspectRatio: 0.8,
-            ),
-            itemBuilder: (context, index) {
-              final categoria = categorias[index];
-              return GestureDetector(
-                onTap: () {
-                  Widget? page;
-                  switch (categoria.label) {
-                    case 'Tecnologia':
-                      page = TecnologiayElectronicaPage();
-                      break;
-                    case 'Vehículos':
-                      page = VehiculosTransportePage();
-                      break;
-                    case 'Eventos':
-                      page = EventosEntretenimientoPage();
-                      break;
-                    case 'Estetica':
-                      page = BellezaEsteticaPage();
-                      break;
-                    case 'Salud y Bienestar':
-                      page = SaludBienestarPage();
-                      break;
-                    case 'Servicios Generales':
-                      page = ServiciosGeneralesPage();
-                      break;
-                    case 'Educacion':
-                      page = EducacionCapacitacionPage();
-                      break;
-                    case 'Limpieza':
-                      page = LimpiezaMantenimientoPage();
-                      break;
-                  }
-                  if (page != null) {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (_) => page!),
-                    );
-                  }
-                },
-                child: Column(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        decoration: BoxDecoration(
-                          gradient: categoria.gradient,
-                          borderRadius: BorderRadius.circular(16),
-                          boxShadow: [
-                            BoxShadow(
-                              color: categoria.color.withOpacity(0.3),
-                              blurRadius: 8,
-                              offset: Offset(0, 3),
+          SizedBox(height: 20),
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: _getStreamSolicitudesSemana(),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Center(child: CircularProgressIndicator(color: Colors.blue));
+                }
+
+                final datos = _procesarDatosSemana(snapshot.data?.docs ?? [], 'solicitudes');
+                
+                return LineChart(
+                  LineChartData(
+                    gridData: FlGridData(
+                      show: false,
+                      drawVerticalLine: true,
+                      horizontalInterval: 1,
+                      verticalInterval: 1,
+                      getDrawingHorizontalLine: (value) => FlLine(
+                        color: Colors.grey.shade300,
+                        strokeWidth: 0.8,
+                      ),
+                      getDrawingVerticalLine: (value) => FlLine(
+                        color: Colors.grey.shade300,
+                        strokeWidth: 0.8,
+                      ),
+                    ),
+                    titlesData: FlTitlesData(
+                      leftTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true, 
+                          reservedSize: 40,
+                          getTitlesWidget: (value, meta) => Text(
+                            value.toInt().toString(),
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontWeight: FontWeight.w500,
+                              fontSize: 12,
                             ),
-                          ],
-                        ),
-                        child: Center(
-                          child: Icon(
-                            categoria.icon,
-                            color: Colors.white,
-                            size: 30,
                           ),
                         ),
                       ),
+                      bottomTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          getTitlesWidget: (value, meta) {
+                            const dias = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+                            return Container(
+                              margin: EdgeInsets.only(top: 8),
+                              child: Text(
+                                dias[value.toInt()],
+                                style: TextStyle(
+                                  color: Colors.grey.shade700,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
                     ),
-                    SizedBox(height: 8),
-                    Text(
-                      categoria.label,
-                      textAlign: TextAlign.center,
-                      style: HomeProveedorStyles.categoryLabelStyle,
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildUltimosServicios() {
-    print("Proveedor ID: $proveedorIdActual");
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Mis últimos servicios', style: HomeProveedorStyles.titleStyle),
-          SizedBox(height: 12),
-          Container(
-            height: 100,
-            alignment: Alignment.center,
-            decoration: HomeProveedorStyles.cardDecoration,
-            child: Text(
-              'No hay servicios disponibles',
-              style: HomeProveedorStyles.subtitleStyle,
+                    borderData: FlBorderData(show: false),
+                    lineBarsData: [
+                      LineChartBarData(
+                        spots: datos,
+                        isCurved: true,
+                        curveSmoothness: 0.35,
+                        color: Colors.blue.shade600,
+                        barWidth: 4,
+                        isStrokeCapRound: true,
+                        dotData: FlDotData(
+                          show: true,
+                          getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
+                            radius: 6,
+                            color: Colors.white,
+                            strokeWidth: 3,
+                            strokeColor: Colors.blue.shade600,
+                          ),
+                        ),
+                        belowBarData: BarAreaData(
+                          show: true,
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.blue.shade400.withOpacity(0.3),
+                              Colors.blue.shade100.withOpacity(0.1),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                    minX: 0,
+                    maxX: 6,
+                    minY: 0,
+                  ),
+                );
+              },
             ),
           ),
         ],
       ),
-    );
+    ),
+  );
+}
+
+Widget _buildGraficoFinalizados() {
+  return Container(
+    decoration: BoxDecoration(
+      gradient: LinearGradient(
+        begin: Alignment.topLeft,
+        end: Alignment.bottomRight,
+        colors: [Colors.green.shade50, Colors.white],
+      ),
+      borderRadius: BorderRadius.circular(16),
+    ),
+    child: Padding(
+      padding: const EdgeInsets.all(20.0),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: Colors.green.shade100,
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Icon(Icons.check_circle_outline, color: Colors.green.shade700, size: 24),
+              ),
+              SizedBox(width: 12),
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Trabajos finalizados',
+                    style: TextStyle(
+                      fontSize: 18, 
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey.shade800,
+                    ),
+                  ),
+                  Text(
+                    'Esta semana',
+                    style: TextStyle(
+                      fontSize: 14, 
+                      color: Colors.grey.shade600,
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          SizedBox(height: 20),
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: _getStreamFinalizadosSemana(),
+              builder: (context, snapshot) {
+                if (snapshot.hasError) {
+                  return Center(child: Text('Error: ${snapshot.error}'));
+                }
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return Center(child: CircularProgressIndicator(color: Colors.green));
+                }
+
+                final datos = _procesarDatosSemana(snapshot.data?.docs ?? [], 'finalizados');
+                
+                return LineChart(
+                  LineChartData(
+                    gridData: FlGridData(
+                      show: false,
+                      drawVerticalLine: true,
+                      horizontalInterval: 1,
+                      verticalInterval: 1,
+                      getDrawingHorizontalLine: (value) => FlLine(
+                        color: Colors.grey.shade300,
+                        strokeWidth: 0.8,
+                      ),
+                      getDrawingVerticalLine: (value) => FlLine(
+                        color: Colors.grey.shade300,
+                        strokeWidth: 0.8,
+                      ),
+                    ),
+                    titlesData: FlTitlesData(
+                      leftTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true, 
+                          reservedSize: 40,
+                          getTitlesWidget: (value, meta) => Text(
+                            value.toInt().toString(),
+                            style: TextStyle(
+                              color: Colors.grey.shade600,
+                              fontWeight: FontWeight.w500,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ),
+                      ),
+                      bottomTitles: AxisTitles(
+                        sideTitles: SideTitles(
+                          showTitles: true,
+                          getTitlesWidget: (value, meta) {
+                            const dias = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
+                            return Container(
+                              margin: EdgeInsets.only(top: 8),
+                              child: Text(
+                                dias[value.toInt()],
+                                style: TextStyle(
+                                  color: Colors.grey.shade700,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            );
+                          },
+                        ),
+                      ),
+                      topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                      rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                    ),
+                    borderData: FlBorderData(show: false),
+                    lineBarsData: [
+                      LineChartBarData(
+                        spots: datos,
+                        isCurved: true,
+                        curveSmoothness: 0.35,
+                        color: Colors.green.shade600,
+                        barWidth: 4,
+                        isStrokeCapRound: true,
+                        dotData: FlDotData(
+                          show: true,
+                          getDotPainter: (spot, percent, barData, index) => FlDotCirclePainter(
+                            radius: 6,
+                            color: Colors.white,
+                            strokeWidth: 3,
+                            strokeColor: Colors.green.shade600,
+                          ),
+                        ),
+                        belowBarData: BarAreaData(
+                          show: true,
+                          gradient: LinearGradient(
+                            begin: Alignment.topCenter,
+                            end: Alignment.bottomCenter,
+                            colors: [
+                              Colors.green.shade400.withOpacity(0.3),
+                              Colors.green.shade100.withOpacity(0.1),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                    minX: 0,
+                    maxX: 6,
+                    minY: 0,
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+Stream<QuerySnapshot> _getStreamSolicitudesSemana() {
+  return FirebaseFirestore.instance
+      .collection('notificaciones')
+      .where('proveedorId', isEqualTo: proveedorIdActual)
+      .snapshots();
+}
+
+Stream<QuerySnapshot> _getStreamFinalizadosSemana() {
+  return FirebaseFirestore.instance
+      .collection('notificaciones')
+      .where('proveedorId', isEqualTo: proveedorIdActual)
+      .where('etapa', isEqualTo: 'finalizado')
+      .snapshots();
+}
+
+List<FlSpot> _procesarDatosSemana(List<QueryDocumentSnapshot> docs, String tipo) {
+  // Inicializar contadores para cada día de la semana (0=Lunes, 6=Domingo)
+  List<int> contadores = List.filled(7, 0);
+  
+  final ahora = DateTime.now();
+  final inicioSemana = ahora.subtract(Duration(days: ahora.weekday - 1));
+  
+  for (var doc in docs) {
+    final data = doc.data() as Map<String, dynamic>;
+    final timestamp = (data['timestamp'] as Timestamp).toDate();
+    
+    // Solo procesar documentos de esta semana
+    final diferenciaDias = timestamp.difference(inicioSemana).inDays;
+    if (diferenciaDias >= 0 && diferenciaDias < 7) {
+      if (tipo == 'solicitudes') {
+        // Para solicitudes: contar TODAS las notificaciones (contactos recibidos)
+        contadores[diferenciaDias]++;
+      } else if (tipo == 'finalizados') {
+        // Para finalizados: SOLO contar las que tienen etapa exactamente 'finalizado'
+        final etapa = data['etapa']?.toString() ?? '';
+        if (etapa == 'finalizado') {
+          contadores[diferenciaDias]++;
+        }
+      }
+    }
+  }
+  
+  // Convertir a FlSpot para el gráfico
+  return contadores.asMap().entries.map((entry) {
+    return FlSpot(entry.key.toDouble(), entry.value.toDouble());
+  }).toList();
+}
+
+Widget _buildAgregarServicio() {
+  return Padding(
+    padding: const EdgeInsets.all(20),
+    child: Align(
+      alignment: Alignment.centerRight,
+      child: ElevatedButton.icon(
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => AgregarServicioPage(),
+            ),
+          );
+        },
+        icon: Icon(Icons.add, color: Colors.white),
+        label: Text(
+          'Agregar servicio',
+          style: TextStyle(color: Colors.white),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: Colors.blue,
+          padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+      ),
+    ),
+  );
+}
+
+
+Widget _buildUltimasCalificaciones() {
+  return Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text('Mis últimas calificaciones', style: HomeProveedorStyles.titleStyle),
+        SizedBox(height: 12),
+        StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('calificaciones')
+              .where('proveedorId', isEqualTo: proveedorIdActual)
+              .snapshots(),
+          builder: (context, snapshot) {
+            // ... tu código de error y loading existente ...
+            
+            var calificaciones = snapshot.data?.docs ?? [];
+            
+            // Ordenar por timestamp
+            calificaciones.sort((a, b) {
+              final timestampA = (a.data() as Map<String, dynamic>)['timestamp'] as Timestamp?;
+              final timestampB = (b.data() as Map<String, dynamic>)['timestamp'] as Timestamp?;
+              
+              if (timestampA == null && timestampB == null) return 0;
+              if (timestampA == null) return 1;
+              if (timestampB == null) return -1;
+              
+              return timestampB.compareTo(timestampA);
+            });
+            
+            if (calificaciones.isEmpty) {
+              // ... tu código de empty state existente ...
+            }
+            
+            // NUEVA LÓGICA EXPANDIBLE
+            final totalCalificaciones = calificaciones.length;
+            final calificacionesAMostrar = calificaciones.take(_mostrarCantidadCalificaciones).toList();
+            final hayMas = totalCalificaciones > _mostrarCantidadCalificaciones;
+            
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Cards de calificaciones
+                ...calificacionesAMostrar.asMap().entries.map((entry) {
+                  return _buildCalificacionCard(entry.value, entry.key);
+                }).toList(),
+                
+                // Botón Ver más
+                if (hayMas) ...[
+                  SizedBox(height: 16),
+                  Center(
+                    child: OutlinedButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          _mostrarCantidadCalificaciones += 3;
+                        });
+                      },
+                      icon: Icon(Icons.expand_more, size: 18),
+                      label: Text('Ver más calificaciones'),
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.blue[700],
+                        side: BorderSide(color: Colors.blue[300]!),
+                      ),
+                    ),
+                  ),
+                ],
+                
+                // Botón Ver menos
+                if (_mostrarCantidadCalificaciones > 3 && totalCalificaciones > 3) ...[
+                  SizedBox(height: 8),
+                  Center(
+                    child: TextButton.icon(
+                      onPressed: () {
+                        setState(() {
+                          _mostrarCantidadCalificaciones = 3;
+                        });
+                      },
+                      icon: Icon(Icons.expand_less, size: 18),
+                      label: Text('Ver menos'),
+                    ),
+                  ),
+                ],
+              ],
+            );
+          },
+        ),
+      ],
+    ),
+  );
+}
+
+Widget _buildCalificacionCard(QueryDocumentSnapshot calificacionDoc, int index) {
+  final calificacion = calificacionDoc.data() as Map<String, dynamic>;
+  final clienteId = calificacion['clienteId'] ?? '';
+  final puntuacion = calificacion['puntuacion'] ?? 0;
+  final comentario = calificacion['comentario'] ?? '';
+  final tipoServicio = calificacion['tipoServicio'] ?? 'Servicio no especificado';
+  final timestamp = (calificacion['timestamp'] as Timestamp?)?.toDate();
+  
+  final colores = [Colors.blue, Colors.green, Colors.orange, Colors.purple, Colors.red, Colors.teal];
+  final colorAvatar = colores[index % colores.length];
+  
+  return Container(
+    margin: EdgeInsets.only(bottom: 16),
+    padding: EdgeInsets.all(16),
+    decoration: BoxDecoration(
+      color: Colors.white,
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: Colors.grey[200]!),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.grey.withOpacity(0.1),
+          spreadRadius: 1,
+          blurRadius: 4,
+          offset: Offset(0, 2),
+        ),
+      ],
+    ),
+    child: FutureBuilder<DocumentSnapshot>(
+      future: FirebaseFirestore.instance.collection('users').doc(clienteId).get(),
+      builder: (context, userSnapshot) {
+        String nombreCliente = 'Cliente';
+        if (userSnapshot.hasData && userSnapshot.data!.exists) {
+          final userData = userSnapshot.data!.data() as Map<String, dynamic>?;
+          nombreCliente = userData?['nombre'] ?? 'Cliente';
+        }
+        
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                CircleAvatar(
+                  radius: 22,
+                  backgroundColor: colorAvatar,
+                  child: Icon(Icons.person, color: Colors.white, size: 22),
+                ),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(nombreCliente, style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+                      SizedBox(height: 4),
+                      Row(
+                        children: List.generate(5, (starIndex) {
+                          return Icon(
+                            starIndex < puntuacion ? Icons.star : Icons.star_border,
+                            color: Colors.amber,
+                            size: 18,
+                          );
+                        }),
+                      ),
+                    ],
+                  ),
+                ),
+                if (timestamp != null)
+                  Text(
+                    _formatearFecha(timestamp),
+                    style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                  ),
+              ],
+            ),
+            SizedBox(height: 12),
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+              decoration: BoxDecoration(
+                color: Colors.blue[50],
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Text(
+                tipoServicio,
+                style: TextStyle(fontSize: 13, color: Colors.blue[700], fontWeight: FontWeight.w500),
+              ),
+            ),
+            if (comentario.isNotEmpty) ...[
+              SizedBox(height: 12),
+              Container(
+                width: double.infinity,
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey[50],
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey[200]!),
+                ),
+                child: Text(
+                  comentario,
+                  style: TextStyle(fontSize: 14, color: Colors.grey[700], fontStyle: FontStyle.italic),
+                ),
+              ),
+            ],
+          ],
+        );
+      },
+    ),
+  );
+}
+
+    String _formatearFecha(DateTime fecha) {
+    final ahora = DateTime.now();
+    final diferencia = ahora.difference(fecha);
+    
+    // Si es hoy
+    if (diferencia.inDays == 0) {
+      if (diferencia.inHours == 0) {
+        if (diferencia.inMinutes == 0) {
+          return 'Ahora';
+        } else if (diferencia.inMinutes < 60) {
+          return 'Hace ${diferencia.inMinutes}m';
+        }
+      }
+      if (diferencia.inHours < 24) {
+        return 'Hace ${diferencia.inHours}h';
+      }
+    }
+    
+    // Si es ayer
+    if (diferencia.inDays == 1) {
+      return 'Ayer';
+    }
+    
+    // Si es esta semana (menos de 7 días)
+    if (diferencia.inDays < 7) {
+      final diasSemana = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+      return diasSemana[fecha.weekday - 1];
+    }
+    
+    // Si es este año
+    if (fecha.year == ahora.year) {
+      final meses = [
+        'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
+        'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'
+      ];
+      return '${fecha.day} ${meses[fecha.month - 1]}';
+    }
+    
+    // Si es de otro año
+    return '${fecha.day}/${fecha.month}/${fecha.year}';
   }
 
   Future<void> mostrarVentanaSolicitudes(BuildContext context) {
@@ -421,11 +953,12 @@ class _HomeProveedorPageState extends State<HomeProveedorPage> {
     final List<Widget> pages = [
       ListView(
         children: [
-          _buildCategoriasServicios(categorias),
-          _buildUltimosServicios(),
+          _buildAgregarServicio(),
+          _buildRendimientoDiario(),
+          _buildUltimasCalificaciones(),
         ],
       ),
-      Center(child: Text('Mis Servicios')),
+      MisServiciosPage(),
       SolicitudesPage(),
       PerfilUsuarioPage(),
     ];
