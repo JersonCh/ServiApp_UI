@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 import 'package:serviapp/modelo/global_user.dart';
 import 'calificacion_modal.dart'; // Asegúrate de importar el modal
 
@@ -228,10 +229,21 @@ class _SolicitudesPageState extends State<SolicitudesPage> {
               final servicio = data['subcategoria'] ?? 'Sin categoría';
               final proveedorId = data['proveedorId'] ?? '';
               final timestamp = data['timestamp'] as Timestamp?;
-              final fechaHora = timestamp != null
-                  ? '${timestamp.toDate().day}/${timestamp.toDate().month}/${timestamp.toDate().year} '
-                      '${timestamp.toDate().hour.toString().padLeft(2, '0')}:${timestamp.toDate().minute.toString().padLeft(2, '0')}'
-                  : 'Sin fecha';
+              final fechaUtc =
+                  data['timestamp'] != null
+                      ? (data['timestamp'] as Timestamp).toDate()
+                      : null;
+
+              final fechaForzada =
+                  fechaUtc != null
+                      ? fechaUtc.subtract(Duration(hours: 5)) // fuerza UTC-5
+                      : null;
+
+              final fechaHora =
+                  fechaForzada != null
+                      ? DateFormat('yyyy-MM-dd HH:mm:ss').format(fechaForzada)
+                      : 'Sin fecha';
+
 
               return FutureBuilder<String?>(
                 future: obtenerNombreProveedor(proveedorId),

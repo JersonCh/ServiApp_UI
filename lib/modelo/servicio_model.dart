@@ -7,7 +7,8 @@ class Servicio {
   final String descripcion;
   final String telefono;
   final String subcategoria;
-  final String idusuario; // Nuevo campo para el ID del proveedor
+  final String idusuario; // ID del proveedor
+  final String? imagen; // ✅ NUEVO CAMPO AGREGADO
   final double sumaCalificaciones;
   final int totalCalificaciones;
   final IconData icon;
@@ -21,6 +22,7 @@ class Servicio {
     required this.telefono,
     required this.subcategoria,
     required this.idusuario,
+    this.imagen, // ✅ CAMPO OPCIONAL AGREGADO
     required this.sumaCalificaciones,
     required this.totalCalificaciones,
     required this.icon,
@@ -44,6 +46,7 @@ class Servicio {
       telefono: data['telefono'] ?? '',
       subcategoria: data['subcategoria'] ?? 'General',
       idusuario: data['idusuario'] ?? '', // Campo del proveedor
+      imagen: data['imagen'], // ✅ CAMPO IMAGEN DESDE FIRESTORE
       sumaCalificaciones: (data['sumaCalificaciones'] ?? 0.0).toDouble(),
       totalCalificaciones: data['totalCalificaciones'] ?? 0,
       icon: _parseIconData(data['icon'] ?? ''),
@@ -68,6 +71,7 @@ class Servicio {
       'telefono': telefono,
       'subcategoria': subcategoria,
       'idusuario': idusuario,
+      'imagen': imagen, // ✅ INCLUIR IMAGEN EN EL MAPA
       'sumaCalificaciones': sumaCalificaciones,
       'totalCalificaciones': totalCalificaciones,
       'icon': _iconToString(icon),
@@ -88,7 +92,6 @@ class Servicio {
       'school': Icons.school,
       'directions_car': Icons.directions_car,
       'devices': Icons.devices,
-      // Añade más mapeos según necesites
     };
     return iconMap[iconName.toLowerCase()] ?? Icons.help_outline;
   }
@@ -103,7 +106,6 @@ class Servicio {
       'purple': Colors.purple,
       'pink': Colors.pink,
       'amber': Colors.amber,
-      // Añade más colores según necesites
     };
     return colorMap[colorValue.toLowerCase()] ?? Colors.grey;
   }
@@ -120,7 +122,6 @@ class Servicio {
       Icons.school: 'school',
       Icons.directions_car: 'directions_car',
       Icons.devices: 'devices',
-      // Añade más mapeos inversos
     };
     return iconMap[icon] ?? 'help';
   }
@@ -135,7 +136,6 @@ class Servicio {
       Colors.purple: 'purple',
       Colors.pink: 'pink',
       Colors.amber: 'amber',
-      // Añade más mapeos inversos
     };
     return colorMap[color] ?? 'grey';
   }
@@ -152,8 +152,6 @@ class Servicio {
   static Future<List<Servicio>> obtenerServiciosPorUsuario(
     String idusuario,
   ) async {
-    // Simulación de acceso a BD (Firebase, SQLite, etc.)
-    // Asegúrate de filtrar por idUsuario
     final snapshot =
         await FirebaseFirestore.instance
             .collection('servicios')
@@ -215,7 +213,6 @@ class Servicio {
         resultado['nombre'] = data['nombre'] ?? 'Proveedor';
         resultado['ubicacion'] = data['ubicacion'] ?? 'Sin ubicación';
         resultado['fotoPerfil'] = data['fotoPerfil'] ?? '';
-        resultado['imagenServicio'] = data['imagenServicio'] ?? '';
         resultado['celular'] = data['celular'] ?? '';
       }
       
@@ -229,7 +226,6 @@ class Servicio {
       resultado['nombre'] = 'Proveedor';
       resultado['ubicacion'] = 'Sin ubicación';
       resultado['fotoPerfil'] = '';
-      resultado['imagenServicio'] = '';
       resultado['celular'] = '';
       resultado['promedioCalificaciones'] = 0.0;
       resultado['totalCalificaciones'] = 0;

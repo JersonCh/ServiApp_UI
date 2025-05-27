@@ -392,7 +392,9 @@ class _TodoPageState extends State<TodoPage> {
         final String fotoPerfilUrl = providerData['fotoPerfil'] ?? '';
         final double promedioCalificaciones = providerData['promedioCalificaciones'] ?? 0.0;
         final int totalCalificaciones = providerData['totalCalificaciones'] ?? 0;
-        final String imagenServicioUrl = providerData['imagenServicio'] ?? '';
+        
+        // ✅ CORREGIDO: Obtener imagen directamente del servicio, no del usuario
+        final String imagenServicioUrl = servicio.imagen ?? ''; // Asumiendo que el campo se llama 'imagenUrl' en el modelo Servicio
 
         return Card(
           elevation: 4,
@@ -562,6 +564,7 @@ class _TodoPageState extends State<TodoPage> {
     );
   }
 
+  // ✅ CORREGIDO: Ya no busca 'imagenServicio' en la colección 'users'
   Future<Map<String, dynamic>> _getProviderDataAndRating(String proveedorId) async {
     final Map<String, dynamic> result = {};
     
@@ -577,7 +580,7 @@ class _TodoPageState extends State<TodoPage> {
         result['nombre'] = data['nombre'] ?? 'Proveedor';
         result['ubicacion'] = data['ubicacion'] ?? 'Sin ubicación';
         result['fotoPerfil'] = data['fotoPerfil'] ?? '';
-        result['imagenServicio'] = data['imagenServicio'] ?? '';
+        // ❌ REMOVIDO: result['imagenServicio'] = data['imagenServicio'] ?? '';
       }
       
       // Obtener calificaciones del proveedor
@@ -607,7 +610,6 @@ class _TodoPageState extends State<TodoPage> {
       result['nombre'] = 'Proveedor';
       result['ubicacion'] = 'Sin ubicación';
       result['fotoPerfil'] = '';
-      result['imagenServicio'] = '';
       result['promedioCalificaciones'] = 0.0;
       result['totalCalificaciones'] = 0;
     }
