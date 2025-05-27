@@ -14,6 +14,7 @@ import 'Services/vehiculos_page.dart';
 import 'Services/salud_page.dart';
 import 'Services/servicios_generales_page.dart';
 import 'package:serviapp/vista/Services/todo.dart';
+import 'package:serviapp/vista/Usuario/historial_solicitudes.dart';
 
 class HomePage extends StatefulWidget {
   @override
@@ -27,7 +28,7 @@ class _HomePageState extends State<HomePage> {
 
   final List<Widget> _pages = [
     _HomeContent(),
-    Center(child: Text('Explorar')),
+    SolicitudesPage(),
     Center(child: Text('Buscar')),
     PerfilUsuarioPage(),
   ];
@@ -73,7 +74,10 @@ class _HomePageState extends State<HomePage> {
         type: BottomNavigationBarType.fixed,
         items: const [
           BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Inicio'),
-          BottomNavigationBarItem(icon: Icon(Icons.explore), label: 'Explorar'),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.explore),
+            label: 'Historial',
+          ),
           BottomNavigationBarItem(icon: Icon(Icons.search), label: 'Buscar'),
           BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Perfil'),
         ],
