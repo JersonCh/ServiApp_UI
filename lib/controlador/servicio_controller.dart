@@ -126,7 +126,7 @@ class ServicioController {
         ];
       case 'Educacion':
         return [
-          'Clases particulares',
+          'Clases Particulares',
           'Tutoriales en linea',
           'Capacitación en software',
           'Programas académicos',
