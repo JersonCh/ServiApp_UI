@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:serviapp/controlador/servicio_controller.dart';
 import 'package:serviapp/styles/Proveedor/agregar_servicio_styles.dart';
 
@@ -113,6 +114,45 @@ class _AgregarServicioPageState extends State<AgregarServicioPage> {
         );
       },
     );
+  }
+  
+  // Validador para título y ubicación (letras, números, puntos, comas)
+  String? _validarTextoGeneral(String? value, String campo, int maxLength) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Por favor ingresa $campo';
+    }
+    
+    if (value.length > maxLength) {
+      return '$campo no puede exceder $maxLength caracteres';
+    }
+    
+    // Expresión regular que permite letras, números, espacios, puntos y comas
+    RegExp regex = RegExp(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ0-9\s.,]+$');
+    if (!regex.hasMatch(value)) {
+      return '$campo solo puede contener letras, números, puntos y comas';
+    }
+    
+    return null;
+  }
+  
+  // Validador específico para teléfono
+  String? _validarTelefono(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Por favor ingresa un teléfono de contacto';
+    }
+    
+    // Verificar que solo contenga números
+    RegExp regex = RegExp(r'^[0-9]+$');
+    if (!regex.hasMatch(value)) {
+      return 'El teléfono solo puede contener números';
+    }
+    
+    // Verificar que tenga exactamente 9 dígitos
+    if (value.length != 9) {
+      return 'El teléfono debe tener exactamente 9 dígitos';
+    }
+    
+    return null;
   }
   
   Future<void> _registrarServicio() async {
@@ -279,13 +319,15 @@ class _AgregarServicioPageState extends State<AgregarServicioPage> {
                             decoration: AgregarServicioStyles.inputDecoration.copyWith(
                               labelText: 'Título del Servicio',
                               prefixIcon: Icon(Icons.title),
+                              helperText: 'Máximo 130 caracteres. Solo letras, números, puntos y comas',
+                              counterText: '${_tituloController.text.length}/130',
                             ),
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'Por favor ingresa un título';
-                              }
-                              return null;
-                            },
+                            maxLength: 130,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑ0-9\s.,]')),
+                            ],
+                            onChanged: (value) => setState(() {}),
+                            validator: (value) => _validarTextoGeneral(value, 'el título', 130),
                           ),
                           SizedBox(height: 16),
                           
@@ -296,14 +338,16 @@ class _AgregarServicioPageState extends State<AgregarServicioPage> {
                               labelText: 'Descripción',
                               prefixIcon: Icon(Icons.description),
                               alignLabelWithHint: true,
+                              helperText: 'Máximo 500 caracteres. Solo letras, números, puntos y comas',
+                              counterText: '${_descripcionController.text.length}/500',
                             ),
                             maxLines: 3,
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'Por favor ingresa una descripción';
-                              }
-                              return null;
-                            },
+                            maxLength: 500,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑ0-9\s.,]')),
+                            ],
+                            onChanged: (value) => setState(() {}),
+                            validator: (value) => _validarTextoGeneral(value, 'la descripción', 500),
                           ),
                           SizedBox(height: 16),
                           
@@ -398,14 +442,17 @@ class _AgregarServicioPageState extends State<AgregarServicioPage> {
                             decoration: AgregarServicioStyles.inputDecoration.copyWith(
                               labelText: 'Teléfono de contacto',
                               prefixIcon: Icon(Icons.phone),
+                              helperText: 'Debe tener exactamente 9 dígitos numéricos',
+                              counterText: '${_telefonoController.text.length}/9',
+                              errorStyle: TextStyle(color: Colors.red),
                             ),
-                            keyboardType: TextInputType.phone,
-                            validator: (value) {
-                              if (value == null || value.trim().isEmpty) {
-                                return 'Por favor ingresa un teléfono de contacto';
-                              }
-                              return null;
-                            },
+                            keyboardType: TextInputType.number,
+                            maxLength: 9,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
+                            onChanged: (value) => setState(() {}),
+                            validator: _validarTelefono,
                           ),
                           SizedBox(height: 16),
                           
@@ -415,7 +462,21 @@ class _AgregarServicioPageState extends State<AgregarServicioPage> {
                             decoration: AgregarServicioStyles.inputDecoration.copyWith(
                               labelText: 'Ubicación (opcional)',
                               prefixIcon: Icon(Icons.location_on),
+                              helperText: 'Máximo 130 caracteres. Solo letras, números, puntos y comas',
+                              counterText: '${_ubicacionController.text.length}/130',
                             ),
+                            maxLength: 130,
+                            inputFormatters: [
+                              FilteringTextInputFormatter.allow(RegExp(r'[a-zA-ZáéíóúÁÉÍÓÚñÑ0-9\s.,]')),
+                            ],
+                            onChanged: (value) => setState(() {}),
+                            validator: (value) {
+                              // Para ubicación permitimos que esté vacío
+                              if (value != null && value.isNotEmpty) {
+                                return _validarTextoGeneral(value, 'la ubicación', 130);
+                              }
+                              return null;
+                            },
                           ),
                         ],
                       ),
