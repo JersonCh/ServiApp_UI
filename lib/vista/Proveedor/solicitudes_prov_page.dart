@@ -217,10 +217,19 @@ class _SolicitudCardState extends State<SolicitudCard> {
                 ),
                 if (widget.fecha != null)
                   Text(
-                    'Fecha y hora: ${widget.fecha!.day}/${widget.fecha!.month}/${widget.fecha!.year} '
-                    '${widget.fecha!.hour.toString().padLeft(2, '0')}:${widget.fecha!.minute.toString().padLeft(2, '0')}',
+                    // Forzar UTC-5 restando 5 horas
+                    () {
+                      final fechaForzada = widget.fecha!.subtract(
+                        Duration(hours: 5),
+                      );
+                      return 'Fecha y hora: '
+                          '${fechaForzada.day}/${fechaForzada.month}/${fechaForzada.year} '
+                          '${fechaForzada.hour.toString().padLeft(2, '0')}:'
+                          '${fechaForzada.minute.toString().padLeft(2, '0')}';
+                    }(),
                     style: TextStyle(fontSize: 10, color: Colors.grey),
                   ),
+
                 SizedBox(height: 10),
 
                 if (mostrarPreguntaAcuerdo) ...[

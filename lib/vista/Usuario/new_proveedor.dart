@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // <-- Importante para inputFormatters
 import 'package:serviapp/controlador/usuario_controller.dart';
 import 'package:serviapp/modelo/usuario_model.dart';
 import 'package:serviapp/styles/usuario/new_proveedor_styles.dart';
@@ -143,17 +144,18 @@ class _NewProveedorPageState extends State<NewProveedorPage> {
       return;
     }
 
-    // Validar DNI (8 dígitos numéricos)
-    if (!RegExp(r'^\d{8}$').hasMatch(dni)) {
+    // Puedes mantener esta validación si quieres un doble chequeo, pero ya no es estrictamente necesario
+    if (dni.length != 8) {
       setState(() {
-        _errorMessage = "El DNI debe tener 8 dígitos numéricos.";
+        _errorMessage = "El DNI debe tener exactamente 8 dígitos.";
       });
       return;
     }
-    // Validar celular (9 dígitos numéricos)
-    if (!RegExp(r'^\d{9}$').hasMatch(celular)) {
+
+    if (celular.length != 9) {
       setState(() {
-        _errorMessage = "El número de celular debe tener 9 dígitos numéricos.";
+        _errorMessage =
+            "El número de celular debe tener exactamente 9 dígitos.";
       });
       return;
     }
@@ -258,15 +260,23 @@ class _NewProveedorPageState extends State<NewProveedorPage> {
               ),
               const SizedBox(height: 10),
               TextField(
-                controller: _dniController, // Campo DNI
+                controller: _dniController,
                 keyboardType: TextInputType.number,
+                inputFormatters: [
+                  LengthLimitingTextInputFormatter(8),
+                  FilteringTextInputFormatter.digitsOnly,
+                ],
                 decoration: NewProveedorStyles.inputDecoration("DNI"),
               ),
               const SizedBox(height: 10),
 
               TextField(
                 controller: _celularController,
-                keyboardType: TextInputType.phone,
+                keyboardType: TextInputType.number,
+                inputFormatters: [
+                  LengthLimitingTextInputFormatter(9),
+                  FilteringTextInputFormatter.digitsOnly,
+                ],
                 decoration: NewProveedorStyles.inputDecoration("Celular"),
               ),
               const SizedBox(height: 10),
@@ -354,36 +364,19 @@ class _NewProveedorPageState extends State<NewProveedorPage> {
               const SizedBox(height: 10),
 
               if (_errorMessage.isNotEmpty)
-                Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: Text(_errorMessage, textAlign: TextAlign.center),
+                Text(
+                  _errorMessage,
+                  style: const TextStyle(color: Colors.red),
+                  textAlign: TextAlign.center,
                 ),
+              const SizedBox(height: 10),
 
-              const SizedBox(height: 20),
-
-              ElevatedButton.icon(
+              ElevatedButton(
                 onPressed: _registerProveedor,
-                icon: const Icon(Icons.person_add),
-                label: const Text("Crear Cuenta"),
-                style: NewProveedorStyles.primaryButton,
-              ),
-
-              const SizedBox(height: 15),
-
-              Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Text("¿Ya tienes cuenta? "),
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.pushReplacementNamed(context, '/login');
-                    },
-                    child: const Text(
-                      "Iniciar sesión",
-                      style: TextStyle(color: Colors.blue),
-                    ),
-                  ),
-                ],
+                child: const Text("Crear Cuenta"),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                ),
               ),
             ],
           ),

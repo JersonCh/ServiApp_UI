@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:serviapp/controlador/usuario_controller.dart';
 import 'package:serviapp/modelo/usuario_model.dart';
 import 'package:serviapp/styles/usuario/new_user_styles.dart';
+import 'package:flutter/services.dart';
 
 class NewUserPage extends StatefulWidget {
   @override
@@ -18,6 +19,21 @@ class _NewUserPageState extends State<NewUserPage> {
   final _usuarioController = UsuarioController();
 
   String _errorMessage = "";
+  bool _passwordsMatch = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _passwordController.addListener(_validatePasswordsMatch);
+    _confirmPasswordController.addListener(_validatePasswordsMatch);
+  }
+
+  void _validatePasswordsMatch() {
+    setState(() {
+      _passwordsMatch =
+          _passwordController.text == _confirmPasswordController.text;
+    });
+  }
 
   void _registerUser() async {
     String nombre = _nombreController.text.trim();
@@ -29,7 +45,6 @@ class _NewUserPageState extends State<NewUserPage> {
 
     setState(() => _errorMessage = "");
 
-    // Validaciones
     if (nombre.isEmpty ||
         email.isEmpty ||
         password.isEmpty ||
@@ -42,7 +57,7 @@ class _NewUserPageState extends State<NewUserPage> {
       return;
     }
 
-    if (password != confirmPassword) {
+    if (!_passwordsMatch) {
       setState(() {
         _errorMessage = "Las contraseñas no coinciden.";
       });
@@ -84,6 +99,17 @@ class _NewUserPageState extends State<NewUserPage> {
   }
 
   @override
+  void dispose() {
+    _nombreController.dispose();
+    _emailController.dispose();
+    _passwordController.dispose();
+    _confirmPasswordController.dispose();
+    _celularController.dispose();
+    _dniController.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: SafeArea(
@@ -115,12 +141,20 @@ class _NewUserPageState extends State<NewUserPage> {
                 controller: _dniController,
                 keyboardType: TextInputType.number,
                 decoration: NewUserStyles.inputDecoration("DNI"),
+                inputFormatters: [
+                  LengthLimitingTextInputFormatter(8),
+                  FilteringTextInputFormatter.digitsOnly,
+                ],
               ),
               const SizedBox(height: 10),
               TextField(
                 controller: _celularController,
                 keyboardType: TextInputType.phone,
                 decoration: NewUserStyles.inputDecoration("Celular"),
+                inputFormatters: [
+                  LengthLimitingTextInputFormatter(9),
+                  FilteringTextInputFormatter.digitsOnly,
+                ],
               ),
               const SizedBox(height: 10),
               TextField(
@@ -140,6 +174,11 @@ class _NewUserPageState extends State<NewUserPage> {
                 obscureText: true,
                 decoration: NewUserStyles.inputDecoration(
                   "Confirmar contraseña",
+                ).copyWith(
+                  errorText:
+                      _passwordsMatch
+                          ? null
+                          : "Asegurate que las contraseñas coinciden",
                 ),
               ),
               const SizedBox(height: 10),
