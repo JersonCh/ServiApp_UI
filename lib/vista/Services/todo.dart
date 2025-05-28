@@ -220,6 +220,7 @@ class HistorialSolicitudesPage extends StatelessWidget {
             .collection('notificaciones')
             .where('clienteId', isEqualTo: FirebaseAuth.instance.currentUser?.uid)
             .where('estado', isEqualTo: 'aceptado')
+            .orderBy('timestamp', descending: true)
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {

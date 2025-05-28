@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import 'package:serviapp/app_theme2.dart';
 import 'package:serviapp/modelo/global_user.dart';
-import 'calificacion_modal.dart'; // Asegúrate de importar el modal
+import 'calificacion_modal.dart';
 
 class SolicitudesPage extends StatefulWidget {
   @override
@@ -155,7 +156,7 @@ class _SolicitudesPageState extends State<SolicitudesPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Este servicio ya ha sido calificado'),
-            backgroundColor: Colors.orange,
+            backgroundColor: ServiceAppTheme.warningColor,
           ),
         );
         return;
@@ -182,7 +183,7 @@ class _SolicitudesPageState extends State<SolicitudesPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text('¡Calificación enviada exitosamente!'),
-              backgroundColor: Colors.green,
+              backgroundColor: ServiceAppTheme.successColor,
               duration: Duration(seconds: 2),
             ),
           );
@@ -196,12 +197,20 @@ class _SolicitudesPageState extends State<SolicitudesPage> {
     if (clienteIdActual == null) {
       return Scaffold(
         appBar: AppBar(title: Text('Historial de Solicitudes')),
-        body: Center(child: Text('Cliente no identificado')),
+        body: ServiceAppWidgets.buildEmptyState(
+          icon: Icons.person_off_outlined,
+          title: 'Cliente no identificado',
+          subtitle: 'No se pudo identificar la sesión del usuario',
+        ),
       );
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text('Historial de Solicitudes')),
+      backgroundColor: ServiceAppTheme.backgroundColor,
+      appBar: AppBar(
+        title: Text('Historial de Solicitudes'),
+        elevation: 0,
+      ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('notificaciones')
@@ -211,17 +220,33 @@ class _SolicitudesPageState extends State<SolicitudesPage> {
             .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
+            return ServiceAppWidgets.buildEmptyState(
+              icon: Icons.error_outline,
+              title: 'Error al cargar datos',
+              subtitle: 'Ocurrió un error: ${snapshot.error}',
+              iconColor: ServiceAppTheme.errorColor,
+            );
           }
+          
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return Center(child: CircularProgressIndicator());
+            return ServiceAppWidgets.buildLoadingIndicator(
+              message: 'Cargando tus solicitudes...',
+            );
           }
+          
           final docs = snapshot.data?.docs ?? [];
+          
           if (docs.isEmpty) {
-            return Center(child: Text('No tienes solicitudes aceptadas.'));
+            return ServiceAppWidgets.buildEmptyState(
+              icon: Icons.history_outlined,
+              title: 'Sin solicitudes aceptadas',
+              subtitle: 'Aún no tienes servicios completados para calificar',
+              iconColor: ServiceAppTheme.mutedTextColor,
+            );
           }
+          
           return ListView.builder(
-            padding: EdgeInsets.all(16),
+            padding: EdgeInsets.all(ServiceSpacing.md),
             itemCount: docs.length,
             itemBuilder: (context, index) {
               final data = docs[index].data() as Map<String, dynamic>;
@@ -241,69 +266,134 @@ class _SolicitudesPageState extends State<SolicitudesPage> {
 
               final fechaHora =
                   fechaForzada != null
-                      ? DateFormat('yyyy-MM-dd HH:mm:ss').format(fechaForzada)
+                      ? DateFormat('dd/MM/yyyy HH:mm').format(fechaForzada)
                       : 'Sin fecha';
-
 
               return FutureBuilder<String?>(
                 future: obtenerNombreProveedor(proveedorId),
                 builder: (context, proveedorSnapshot) {
                   final nombreProveedor =
                       proveedorSnapshot.data ?? 'Proveedor desconocido';
-                  return Card(
-                    elevation: 3,
-                    margin: EdgeInsets.symmetric(vertical: 6),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Padding(
-                      padding: EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      servicio,
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                    SizedBox(height: 4),
-                                    Text('Proveedor: $nombreProveedor'),
-                                    SizedBox(height: 2),
-                                    Text(
-                                      'Fecha y hora: $fechaHora',
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                  
+                  return ServiceAppWidgets.buildServiceCard(
+                    margin: EdgeInsets.only(bottom: ServiceSpacing.md),
+                    useGradient: true,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Header con información del servicio
+                        Row(
+                          children: [
+                            // Icono del servicio
+                            Container(
+                              width: 48,
+                              height: 48,
+                              decoration: BoxDecoration(
+                                gradient: ServiceAppTheme.primaryGradient,
+                                borderRadius: BorderRadius.circular(ServiceRadius.md),
+                                boxShadow: ServiceAppTheme.softShadow,
                               ),
-                              Column(
+                              child: Icon(
+                                Icons.build_outlined,
+                                color: ServiceAppTheme.onPrimaryTextColor,
+                                size: 24,
+                              ),
+                            ),
+                            SizedBox(width: ServiceSpacing.md),
+                            
+                            // Información del servicio
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  _buildBotonCalificar(
-                                    notificacionId,
-                                    proveedorId,
-                                    nombreProveedor,
+                                  Text(
                                     servicio,
+                                    style: ServiceTextStyles.headline3.copyWith(
+                                      fontSize: 18,
+                                    ),
                                   ),
-                                  SizedBox(height: 8),
-                                  _buildBotonFavoritos(notificacionId),
+                                  SizedBox(height: ServiceSpacing.xs),
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.person_outline,
+                                        size: 16,
+                                        color: ServiceAppTheme.secondaryTextColor,
+                                      ),
+                                      SizedBox(width: ServiceSpacing.xs),
+                                      Expanded(
+                                        child: Text(
+                                          nombreProveedor,
+                                          style: ServiceTextStyles.bodyMedium.copyWith(
+                                            color: ServiceAppTheme.secondaryTextColor,
+                                          ),
+                                          overflow: TextOverflow.ellipsis,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  SizedBox(height: ServiceSpacing.xs),
+                                  Row(
+                                    children: [
+                                      Icon(
+                                        Icons.access_time_outlined,
+                                        size: 16,
+                                        color: ServiceAppTheme.mutedTextColor,
+                                      ),
+                                      SizedBox(width: ServiceSpacing.xs),
+                                      Text(
+                                        fechaHora,
+                                        style: ServiceTextStyles.caption.copyWith(
+                                          fontSize: 13,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ],
                               ),
-                            ],
+                            ),
+                          ],
+                        ),
+                        
+                        SizedBox(height: ServiceSpacing.lg),
+                        
+                        // Divisor sutil
+                        Container(
+                          height: 1,
+                          decoration: BoxDecoration(
+                            gradient: LinearGradient(
+                              colors: [
+                                ServiceAppTheme.dividerColor.withOpacity(0),
+                                ServiceAppTheme.dividerColor.withOpacity(0.5),
+                                ServiceAppTheme.dividerColor.withOpacity(0),
+                              ],
+                            ),
                           ),
-                        ],
-                      ),
+                        ),
+                        
+                        SizedBox(height: ServiceSpacing.lg),
+                        
+                        // Botones de acción
+                        Row(
+                          children: [
+                            // Botón de calificar (expandido)
+                            Expanded(
+                              flex: 2,
+                              child: _buildBotonCalificar(
+                                notificacionId,
+                                proveedorId,
+                                nombreProveedor,
+                                servicio,
+                              ),
+                            ),
+                            
+                            SizedBox(width: ServiceSpacing.md),
+                            
+                            // Botón de favoritos (más pequeño)
+                            _buildBotonFavoritos(notificacionId),
+                          ],
+                        ),
+                      ],
                     ),
                   );
                 },
@@ -325,47 +415,76 @@ class _SolicitudesPageState extends State<SolicitudesPage> {
     if (estadosCalificacion[notificacionId] == true) {
       return _buildBotonCalificado();
     }
+    
     // Si no está en el estado local, verificar en la base de datos
     return FutureBuilder<bool>(
       future: yaCalificado(notificacionId, clienteIdActual!),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
           return Container(
-            padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-            child: SizedBox(
-              width: 16,
-              height: 16,
-              child: CircularProgressIndicator(strokeWidth: 2),
+            height: 48,
+            decoration: BoxDecoration(
+              color: ServiceAppTheme.lightBlue,
+              borderRadius: BorderRadius.circular(ServiceRadius.md),
+              border: Border.all(
+                color: ServiceAppTheme.dividerColor,
+                width: 1,
+              ),
+            ),
+            child: Center(
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    ServiceAppTheme.primaryBlue,
+                  ),
+                ),
+              ),
             ),
           );
         }
+        
         final yaEstaCalificado = snapshot.data ?? false;
+        
         if (yaEstaCalificado) {
           return _buildBotonCalificado();
         } else {
-          return ElevatedButton(
-            onPressed: () => mostrarModalCalificacion(
-              context,
-              notificacionId,
-              proveedorId,
-              clienteIdActual!,
-              nombreProveedor,
-              servicio,
+          return Container(
+            width: double.infinity,
+            height: 48,
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(ServiceRadius.md),
+              boxShadow: ServiceAppTheme.softShadow,
             ),
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.blue,
-              foregroundColor: Colors.white,
-              padding: EdgeInsets.symmetric(
-                horizontal: 16,
-                vertical: 8,
+            child: ElevatedButton.icon(
+              onPressed: () => mostrarModalCalificacion(
+                context,
+                notificacionId,
+                proveedorId,
+                clienteIdActual!,
+                nombreProveedor,
+                servicio,
               ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
+              icon: Icon(Icons.star_rate_rounded, size: 20),
+              label: Text(
+                'Calificar Servicio',
+                style: ServiceTextStyles.button.copyWith(fontSize: 15),
               ),
-            ),
-            child: Text(
-              'Calificar',
-              style: TextStyle(fontSize: 12),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: ServiceAppTheme.primaryBlue,
+                foregroundColor: ServiceAppTheme.onPrimaryTextColor,
+                elevation: 0,
+                shadowColor: Colors.transparent,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(ServiceRadius.md),
+                ),
+                padding: EdgeInsets.symmetric(
+                  horizontal: ServiceSpacing.md,
+                  vertical: ServiceSpacing.md,
+                ),
+              ),
             ),
           );
         }
@@ -375,32 +494,50 @@ class _SolicitudesPageState extends State<SolicitudesPage> {
 
   Widget _buildBotonCalificado() {
     return Container(
-      padding: EdgeInsets.symmetric(
-        horizontal: 12,
-        vertical: 6,
-      ),
+      width: double.infinity,
+      height: 48,
       decoration: BoxDecoration(
-        color: Colors.green[100],
-        borderRadius: BorderRadius.circular(20),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            ServiceAppTheme.successColor.withOpacity(0.1),
+            ServiceAppTheme.successColor.withOpacity(0.05),
+          ],
+        ),
+        borderRadius: BorderRadius.circular(ServiceRadius.md),
+        border: Border.all(
+          color: ServiceAppTheme.successColor.withOpacity(0.3),
+          width: 1.5,
+        ),
       ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.check_circle,
-            size: 16,
-            color: Colors.green[700],
-          ),
-          SizedBox(width: 4),
-          Text(
-            'Calificado',
-            style: TextStyle(
-              color: Colors.green[700],
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
+      child: Center(
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: EdgeInsets.all(2),
+              decoration: BoxDecoration(
+                color: ServiceAppTheme.successColor,
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                Icons.check,
+                size: 16,
+                color: Colors.white,
+              ),
             ),
-          ),
-        ],
+            SizedBox(width: ServiceSpacing.sm),
+            Text(
+              'Servicio Calificado',
+              style: ServiceTextStyles.button.copyWith(
+                color: ServiceAppTheme.successColor,
+                fontWeight: FontWeight.w600,
+                fontSize: 15,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
@@ -432,7 +569,7 @@ class _SolicitudesPageState extends State<SolicitudesPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: No se pudo encontrar el servicio'),
-            backgroundColor: Colors.red,
+            backgroundColor: ServiceAppTheme.errorColor,
           ),
         );
         return;
@@ -450,7 +587,7 @@ class _SolicitudesPageState extends State<SolicitudesPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Eliminado de favoritos'),
-            backgroundColor: Colors.orange,
+            backgroundColor: ServiceAppTheme.warningColor,
             duration: Duration(seconds: 2),
           ),
         );
@@ -464,7 +601,7 @@ class _SolicitudesPageState extends State<SolicitudesPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Agregado a favoritos'),
-            backgroundColor: Colors.green,
+            backgroundColor: ServiceAppTheme.successColor,
             duration: Duration(seconds: 2),
           ),
         );
@@ -475,7 +612,7 @@ class _SolicitudesPageState extends State<SolicitudesPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error al procesar favoritos'),
-          backgroundColor: Colors.red,
+          backgroundColor: ServiceAppTheme.errorColor,
         ),
       );
     }
@@ -487,13 +624,26 @@ class _SolicitudesPageState extends State<SolicitudesPage> {
       builder: (context, servicioSnapshot) {
         if (servicioSnapshot.connectionState == ConnectionState.waiting) {
           return Container(
-            width: 32,
-            height: 32,
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: ServiceAppTheme.lightBlue,
+              borderRadius: BorderRadius.circular(ServiceRadius.md),
+              border: Border.all(
+                color: ServiceAppTheme.dividerColor,
+                width: 1,
+              ),
+            ),
             child: Center(
               child: SizedBox(
                 width: 16,
                 height: 16,
-                child: CircularProgressIndicator(strokeWidth: 2),
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    ServiceAppTheme.primaryBlue,
+                  ),
+                ),
               ),
             ),
           );
@@ -502,8 +652,21 @@ class _SolicitudesPageState extends State<SolicitudesPage> {
         final servicioId = servicioSnapshot.data;
         if (servicioId == null) {
           return Container(
-            padding: EdgeInsets.all(6),
-            child: Icon(Icons.error, size: 14, color: Colors.grey),
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: ServiceAppTheme.lightBlue.withOpacity(0.3),
+              borderRadius: BorderRadius.circular(ServiceRadius.md),
+              border: Border.all(
+                color: ServiceAppTheme.dividerColor,
+                width: 1,
+              ),
+            ),
+            child: Icon(
+              Icons.error_outline,
+              size: 20,
+              color: ServiceAppTheme.mutedTextColor,
+            ),
           );
         }
 
@@ -517,13 +680,26 @@ class _SolicitudesPageState extends State<SolicitudesPage> {
           builder: (context, snapshot) {
             if (snapshot.connectionState == ConnectionState.waiting) {
               return Container(
-                width: 32,
-                height: 32,
+                width: 48,
+                height: 48,
+                decoration: BoxDecoration(
+                  color: ServiceAppTheme.lightBlue,
+                  borderRadius: BorderRadius.circular(ServiceRadius.md),
+                  border: Border.all(
+                    color: ServiceAppTheme.dividerColor,
+                    width: 1,
+                  ),
+                ),
                 child: Center(
                   child: SizedBox(
                     width: 16,
                     height: 16,
-                    child: CircularProgressIndicator(strokeWidth: 2),
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                        ServiceAppTheme.primaryBlue,
+                      ),
+                    ),
                   ),
                 ),
               );
@@ -531,32 +707,54 @@ class _SolicitudesPageState extends State<SolicitudesPage> {
 
             final esFav = snapshot.data?.docs.isNotEmpty ?? false;
 
-            return GestureDetector(
-              onTap: () => toggleFavoritoConServicioId(servicioId),
-              child: Container(
-                padding: EdgeInsets.all(6),
-                decoration: BoxDecoration(
-                  color: esFav ? Colors.red[100] : Colors.amber[100],
-                  borderRadius: BorderRadius.circular(16),
+            return Container(
+              width: 48,
+              height: 48,
+              decoration: BoxDecoration(
+                gradient: esFav
+                    ? LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          const Color(0xFFFFB800).withOpacity(0.2),
+                          const Color(0xFFFF8F00).withOpacity(0.1),
+                        ],
+                      )
+                    : LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: [
+                          ServiceAppTheme.lightBlue.withOpacity(0.8),
+                          ServiceAppTheme.lightBlue.withOpacity(0.4),
+                        ],
+                      ),
+                borderRadius: BorderRadius.circular(ServiceRadius.md),
+                border: Border.all(
+                  color: esFav
+                      ? const Color(0xFFFFB800).withOpacity(0.5)
+                      : ServiceAppTheme.dividerColor,
+                  width: 1.5,
                 ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    Icon(
-                      Icons.star,
-                      size: 14,
-                      color: esFav ? Colors.red[700] : Colors.amber[700],
-                    ),
-                    SizedBox(width: 4),
-                    Text(
-                      esFav ? 'Quitar' : 'Favorito',
-                      style: TextStyle(
-                        color: esFav ? Colors.red[700] : Colors.amber[700],
-                        fontSize: 10,
-                        fontWeight: FontWeight.w500,
+                boxShadow: esFav ? ServiceAppTheme.softShadow : null,
+              ),
+              child: Material(
+                color: Colors.transparent,
+                child: InkWell(
+                  onTap: () => toggleFavoritoConServicioId(servicioId),
+                  borderRadius: BorderRadius.circular(ServiceRadius.md),
+                  child: Center(
+                    child: AnimatedSwitcher(
+                      duration: Duration(milliseconds: 300),
+                      child: Icon(
+                        esFav ? Icons.star_rounded : Icons.star_outline_rounded,
+                        key: ValueKey(esFav),
+                        size: 24,
+                        color: esFav
+                            ? const Color(0xFFFFB800)
+                            : ServiceAppTheme.mutedTextColor,
                       ),
                     ),
-                  ],
+                  ),
                 ),
               ),
             );
@@ -581,7 +779,7 @@ class _SolicitudesPageState extends State<SolicitudesPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Eliminado de favoritos'),
-            backgroundColor: Colors.orange,
+            backgroundColor: ServiceAppTheme.warningColor,
             duration: Duration(seconds: 2),
           ),
         );
@@ -595,7 +793,7 @@ class _SolicitudesPageState extends State<SolicitudesPage> {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Agregado a favoritos'),
-            backgroundColor: Colors.green,
+            backgroundColor: ServiceAppTheme.successColor,
             duration: Duration(seconds: 2),
           ),
         );
@@ -605,7 +803,7 @@ class _SolicitudesPageState extends State<SolicitudesPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error al procesar favoritos'),
-          backgroundColor: Colors.red,
+          backgroundColor: ServiceAppTheme.errorColor,
         ),
       );
     }
