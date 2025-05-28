@@ -27,7 +27,7 @@ class EventosEntretenimientoPage extends StatelessWidget {
     return [
       ServiceModel(
         title: 'Fotografía y filmación',
-        imageUrl: 'https://www.sonoluz.com.pe/images/servicios/filmacion-eventos.jpg',
+        imageUrl: 'https://i.imgur.com/5Nra9qH.png',
       ),
       ServiceModel(
         title: 'Organización de eventos',
