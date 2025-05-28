@@ -233,7 +233,7 @@ List<String> obtenerSubcategorias(String categoria) {
     case 'Tecnologia':
       return [
         'Reparación de computadoras y laptops',
-        'Soporte técnico',
+        'Mantenimiento',
         'Instalación de software',
         'Redes y conectividad',
         'Reparación de celulares',
@@ -241,66 +241,58 @@ List<String> obtenerSubcategorias(String categoria) {
       ];
     case 'Vehículos':
       return [
-        'Mecánica general',
-        'Electricidad automotriz',
-        'Planchado y pintura',
-        'Cambio de aceite',
-        'Lavado de autos',
+        'Mecánica automotriz',
+        'Lavado y detallado de autos',
+        'Cambio de llantas y baterías',
         'Servicio de grúa',
+        'Transporte y mudanzas',
+        'Lubricentro',
       ];
     case 'Eventos':
       return [
+        'Fotografía y filmación',
         'Organización de eventos',
-        'Catering',
-        'Fotografía y video',
-        'Animación',
-        'Decoración',
-        'DJ y sonido',
+        'Catering y banquetes',
+        'Música en vivo y DJ',
       ];
     case 'Estetica':
       return [
-        'Corte de cabello',
+        'Peluquería y barbería a domicilio',
         'Manicure y pedicure',
-        'Maquillaje',
-        'Tratamientos faciales',
-        'Depilación',
-        'Masajes',
+        'Maquillaje y asesoría de imagen',
       ];
     case 'Salud y Bienestar':
       return [
-        'Enfermería a domicilio',
-        'Fisioterapia',
-        'Nutrición',
-        'Psicología',
-        'Entrenamiento personal',
-        'Yoga y meditación',
+        'Consulta médica a domicilio',
+        'Enfermería y cuidados a domicilio',
+        'Terapia física y rehabilitación',
+        'Masajes y relajación',
+        'Entrenador personal',
       ];
     case 'Servicios Generales':
       return [
+        'Albañileria',
+        'Plomeria',
         'Electricidad',
-        'Gasfitería',
-        'Carpintería',
-        'Albañilería',
-        'Pintura',
-        'Cerrajería',
+        'Carpinteria',
+        'Pintura y acabados',
+        'Jardineria y paisajismo',
       ];
     case 'Educacion':
       return [
         'Clases particulares',
-        'Idiomas',
-        'Música',
-        'Arte',
-        'Apoyo escolar',
-        'Preparación universitaria',
+        'Tutoriales en linea',
+        'Capacitación en software',
+        'Programas académicos',
+        'Cursos y Certificaciones',
+        'Vacaciones útiles',
       ];
     case 'Limpieza':
       return [
-        'Limpieza de hogares',
-        'Limpieza de oficinas',
-        'Lavado de muebles',
-        'Lavandería',
-        'Fumigación',
-        'Jardinería',
+        'Limpieza del hogar y oficinas',
+        'Lavanderia y el planchado',
+        'Desinfeccion',
+        'Encerado y pulido de muebles',
       ];
     default:
       return [];

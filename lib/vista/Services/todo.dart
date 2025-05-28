@@ -47,96 +47,81 @@ class HistorialSolicitudesPage extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
-      backgroundColor: Colors.transparent,
       builder: (ctx) {
-        return Container(
-          decoration: const BoxDecoration(
-            color: ServiceAppTheme.backgroundColor,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-          ),
-          child: DraggableScrollableSheet(
-            expand: false,
-            initialChildSize: 0.8,
-            builder: (ctx, scrollController) {
-              return Column(
-                children: [
-                  // Header del modal
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: const BoxDecoration(
-                      gradient: ServiceAppTheme.primaryGradient,
-                      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-                    ),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: Text(
-                            'Proveedores disponibles',
-                            style: ServiceTextStyles.headline2.copyWith(
-                              color: ServiceAppTheme.onPrimaryTextColor,
-                            ),
-                          ),
-                        ),
-                        IconButton(
-                          icon: const Icon(Icons.close, color: ServiceAppTheme.onPrimaryTextColor),
-                          onPressed: () => Navigator.of(ctx).pop(),
-                        ),
-                      ],
-                    ),
+        return DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.8,
+          builder: (ctx, scrollController) {
+            return Scaffold(
+              appBar: AppBar(
+                automaticallyImplyLeading: false,
+                title: Text('Proveedores para: $subcategoria'),
+                actions: [
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(ctx).pop(),
                   ),
-                  
-                  // Contenido del modal
-                  Expanded(
-                    child: StreamBuilder<QuerySnapshot>(
-                      stream: FirebaseFirestore.instance
-                          .collection('users')
-                          .where('rol', isEqualTo: 'proveedor')
-                          .where('tipoTrabajo', arrayContains: subcategoria)
-                          .where('isOnline', isEqualTo: true)
-                          .snapshots(),
-                      builder: (context, snapshot) {
-                        if (snapshot.connectionState == ConnectionState.waiting) {
-                          return ServiceAppWidgets.buildLoadingIndicator(
-                            message: 'Buscando proveedores...',
-                          );
-                        }
-                        if (snapshot.hasError) {
-                          return ServiceAppWidgets.buildEmptyState(
-                            icon: Icons.error_outline,
-                            title: 'Error al cargar',
-                            subtitle: 'Ha ocurrido un error al buscar proveedores',
-                            iconColor: ServiceAppTheme.errorColor,
-                          );
-                        }
+                ],
+              ),
+              body: StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('servicios')  // ✅ Cambiar a servicios
+                    .where('subcategoria', isEqualTo: subcategoria)
+                    .where('estado', isEqualTo: "true")
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return Center(child: Text('Error: ${snapshot.error}'));
+                  }
 
-                        final docs = snapshot.data?.docs ?? [];
-                        if (docs.isEmpty) {
-                          return ServiceAppWidgets.buildEmptyState(
-                            icon: Icons.person_search,
-                            title: 'Sin proveedores',
-                            subtitle: 'No se encontraron proveedores disponibles para este servicio',
-                          );
-                        }
+                  final docs = snapshot.data?.docs ?? [];
+                  if (docs.isEmpty) {
+                    return const Center(
+                      child: Text('No se encontraron proveedores disponibles.'),
+                    );
+                  }
 
-                        return ListView.builder(
-                          controller: scrollController,
-                          padding: const EdgeInsets.all(16),
-                          itemCount: docs.length,
-                          itemBuilder: (context, index) {
-                            final data = docs[index].data() as Map<String, dynamic>;
-                            final uidProveedor = docs[index].id;
-                            final nombre = data['nombre'] ?? 'Proveedor sin nombre';
-                            final celular = data['celular'] ?? 'Número no disponible';
-                            final ubicacion = data['ubicacion'] ?? 'Sin ubicación';
-                            final fotoPerfil = data['fotoPerfil'] ?? '';
+                  return ListView.builder(
+                    controller: scrollController,
+                    itemCount: docs.length,
+                    itemBuilder: (context, index) {
+                      final data = docs[index].data() as Map<String, dynamic>;
+                      final uidProveedor = data['idusuario']; // ✅ Cambiar a 'idusuario'
+                      final titulo = data['titulo'] ?? 'Servicio sin título';
+                      final descripcion = data['descripcion'] ?? 'Sin descripción';
 
-                            return ServiceAppWidgets.buildProviderCard(
-                              providerName: nombre,
-                              location: ubicacion,
-                              rating: 0.0, // Puedes agregar lógica para calcular rating real
-                              totalRatings: 0,
-                              profileImage: fotoPerfil,
-                              onTap: () async {
+                      return FutureBuilder<DocumentSnapshot>(
+                        future: FirebaseFirestore.instance
+                            .collection('users')
+                            .doc(uidProveedor)
+                            .get(),
+                        builder: (context, userSnapshot) {
+                          if (userSnapshot.connectionState == ConnectionState.waiting) {
+                            return const ListTile(
+                              title: Text('Cargando...'),
+                            );
+                          }
+
+                          final userData = userSnapshot.data?.data() as Map<String, dynamic>? ?? {};
+                          final nombre = userData['nombre'] ?? 'Proveedor sin nombre';
+                          final celular = userData['celular'] ?? 'Número no disponible';
+
+                          return ListTile(
+                            title: Text(titulo),
+                            subtitle: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text('Proveedor: $nombre'),
+                                Text('Celular: $celular'),
+                                Text(descripcion, maxLines: 2, overflow: TextOverflow.ellipsis),
+                              ],
+                            ),
+                            trailing: ElevatedButton(
+                              child: const Text('Solicitar servicio'),
+                              onPressed: () async {
                                 final solicitudId = const Uuid().v4();
                                 await FirebaseFirestore.instance
                                     .collection('notificaciones')
@@ -153,51 +138,21 @@ class HistorialSolicitudesPage extends StatelessWidget {
                                     });
                                 Navigator.of(ctx).pop();
                                 ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: const Text('Solicitud enviada al proveedor.'),
-                                    backgroundColor: ServiceAppTheme.successColor,
+                                  const SnackBar(
+                                    content: Text('Solicitud enviada al proveedor.'),
                                   ),
                                 );
                               },
-                              actions: [
-                                ServiceAppWidgets.buildPrimaryButton(
-                                  text: 'Solicitar servicio',
-                                  onPressed: () async {
-                                    final solicitudId = const Uuid().v4();
-                                    await FirebaseFirestore.instance
-                                        .collection('notificaciones')
-                                        .doc(solicitudId)
-                                        .set({
-                                          'id': solicitudId,
-                                          'clienteId': currentUser.uid,
-                                          'nombreCliente': userDoc.data()?['nombre'] ?? '',
-                                          'proveedorId': uidProveedor,
-                                          'estado': 'pendiente',
-                                          'etapa': '',
-                                          'subcategoria': subcategoria,
-                                          'timestamp': FieldValue.serverTimestamp(),
-                                        });
-                                    Navigator.of(ctx).pop();
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: const Text('Solicitud enviada al proveedor.'),
-                                        backgroundColor: ServiceAppTheme.successColor,
-                                      ),
-                                    );
-                                  },
-                                  icon: Icons.send,
-                                ),
-                              ],
-                            );
-                          },
-                        );
-                      },
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  );
+                },
+              ),
+            );
+          },
         );
       },
     );
