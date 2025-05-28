@@ -1,7 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'package:serviapp/modelo/servicio_model.dart';
-import 'package:serviapp/styles/Services/servicios_styles.dart';
+import 'package:serviapp/app_theme2.dart';
+import 'package:serviapp/modelo/servicio_model.dart'; 
 import 'package:url_launcher/url_launcher.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -28,18 +28,18 @@ class HistorialSolicitudesPage extends StatelessWidget {
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Debes iniciar sesión para ver proveedores.'),
+        SnackBar(
+          content: const Text('Debes iniciar sesión para ver proveedores.'),
+          backgroundColor: ServiceAppTheme.errorColor,
         ),
       );
       return;
     }
 
-    final userDoc =
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(currentUser.uid)
-            .get();
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(currentUser.uid)
+        .get();
     final String userType = userDoc.data()?['rol'] ?? 'desconocido';
 
     if (userType != 'cliente') return;
@@ -47,92 +47,157 @@ class HistorialSolicitudesPage extends StatelessWidget {
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
+      backgroundColor: Colors.transparent,
       builder: (ctx) {
-        return DraggableScrollableSheet(
-          expand: false,
-          initialChildSize: 0.8,
-          builder: (ctx, scrollController) {
-            return Scaffold(
-              appBar: AppBar(
-                automaticallyImplyLeading: false,
-                title: Text('Proveedores para: $subcategoria'),
-                actions: [
-                  IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.of(ctx).pop(),
+        return Container(
+          decoration: const BoxDecoration(
+            color: ServiceAppTheme.backgroundColor,
+            borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          ),
+          child: DraggableScrollableSheet(
+            expand: false,
+            initialChildSize: 0.8,
+            builder: (ctx, scrollController) {
+              return Column(
+                children: [
+                  // Header del modal
+                  Container(
+                    padding: const EdgeInsets.all(20),
+                    decoration: const BoxDecoration(
+                      gradient: ServiceAppTheme.primaryGradient,
+                      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+                    ),
+                    child: Row(
+                      children: [
+                        Expanded(
+                          child: Text(
+                            'Proveedores disponibles',
+                            style: ServiceTextStyles.headline2.copyWith(
+                              color: ServiceAppTheme.onPrimaryTextColor,
+                            ),
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close, color: ServiceAppTheme.onPrimaryTextColor),
+                          onPressed: () => Navigator.of(ctx).pop(),
+                        ),
+                      ],
+                    ),
                   ),
-                ],
-              ),
-              body: StreamBuilder<QuerySnapshot>(
-                stream:
-                    FirebaseFirestore.instance
-                        .collection('users')
-                        .where('rol', isEqualTo: 'proveedor')
-                        .where('tipoTrabajo', arrayContains: subcategoria)
-                        .where('isOnline', isEqualTo: true)
-                        .snapshots(),
-                builder: (context, snapshot) {
-                  if (snapshot.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
-                  }
-                  if (snapshot.hasError) {
-                    return Center(child: Text('Error: ${snapshot.error}'));
-                  }
+                  
+                  // Contenido del modal
+                  Expanded(
+                    child: StreamBuilder<QuerySnapshot>(
+                      stream: FirebaseFirestore.instance
+                          .collection('users')
+                          .where('rol', isEqualTo: 'proveedor')
+                          .where('tipoTrabajo', arrayContains: subcategoria)
+                          .where('isOnline', isEqualTo: true)
+                          .snapshots(),
+                      builder: (context, snapshot) {
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return ServiceAppWidgets.buildLoadingIndicator(
+                            message: 'Buscando proveedores...',
+                          );
+                        }
+                        if (snapshot.hasError) {
+                          return ServiceAppWidgets.buildEmptyState(
+                            icon: Icons.error_outline,
+                            title: 'Error al cargar',
+                            subtitle: 'Ha ocurrido un error al buscar proveedores',
+                            iconColor: ServiceAppTheme.errorColor,
+                          );
+                        }
 
-                  final docs = snapshot.data?.docs ?? [];
-                  if (docs.isEmpty) {
-                    return const Center(
-                      child: Text('No se encontraron proveedores disponibles.'),
-                    );
-                  }
+                        final docs = snapshot.data?.docs ?? [];
+                        if (docs.isEmpty) {
+                          return ServiceAppWidgets.buildEmptyState(
+                            icon: Icons.person_search,
+                            title: 'Sin proveedores',
+                            subtitle: 'No se encontraron proveedores disponibles para este servicio',
+                          );
+                        }
 
-                  return ListView.builder(
-                    controller: scrollController,
-                    itemCount: docs.length,
-                    itemBuilder: (context, index) {
-                      final data = docs[index].data() as Map<String, dynamic>;
-                      final uidProveedor = docs[index].id;
-                      final nombre = data['nombre'] ?? 'Proveedor sin nombre';
-                      final celular = data['celular'] ?? 'Número no disponible';
+                        return ListView.builder(
+                          controller: scrollController,
+                          padding: const EdgeInsets.all(16),
+                          itemCount: docs.length,
+                          itemBuilder: (context, index) {
+                            final data = docs[index].data() as Map<String, dynamic>;
+                            final uidProveedor = docs[index].id;
+                            final nombre = data['nombre'] ?? 'Proveedor sin nombre';
+                            final celular = data['celular'] ?? 'Número no disponible';
+                            final ubicacion = data['ubicacion'] ?? 'Sin ubicación';
+                            final fotoPerfil = data['fotoPerfil'] ?? '';
 
-                      return ListTile(
-                        title: Text(nombre),
-                        subtitle: Text('Celular: $celular'),
-                        trailing: ElevatedButton(
-                          child: const Text('Solicitar servicio'),
-                          onPressed: () async {
-                            final solicitudId = const Uuid().v4();
-                            await FirebaseFirestore.instance
-                                .collection('notificaciones')
-                                .doc(solicitudId)
-                                .set({
-                                  'id': solicitudId,
-                                  'clienteId': currentUser.uid,
-                                  'nombreCliente':
-                                      userDoc.data()?['nombre'] ?? '',
-                                  'proveedorId': uidProveedor,
-                                  'estado': 'pendiente',
-                                  'etapa': '',
-                                  'subcategoria': subcategoria,
-                                  'timestamp': FieldValue.serverTimestamp(),
-                                });
-                            Navigator.of(ctx).pop();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text(
-                                  'Solicitud enviada al proveedor.',
+                            return ServiceAppWidgets.buildProviderCard(
+                              providerName: nombre,
+                              location: ubicacion,
+                              rating: 0.0, // Puedes agregar lógica para calcular rating real
+                              totalRatings: 0,
+                              profileImage: fotoPerfil,
+                              onTap: () async {
+                                final solicitudId = const Uuid().v4();
+                                await FirebaseFirestore.instance
+                                    .collection('notificaciones')
+                                    .doc(solicitudId)
+                                    .set({
+                                      'id': solicitudId,
+                                      'clienteId': currentUser.uid,
+                                      'nombreCliente': userDoc.data()?['nombre'] ?? '',
+                                      'proveedorId': uidProveedor,
+                                      'estado': 'pendiente',
+                                      'etapa': '',
+                                      'subcategoria': subcategoria,
+                                      'timestamp': FieldValue.serverTimestamp(),
+                                    });
+                                Navigator.of(ctx).pop();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: const Text('Solicitud enviada al proveedor.'),
+                                    backgroundColor: ServiceAppTheme.successColor,
+                                  ),
+                                );
+                              },
+                              actions: [
+                                ServiceAppWidgets.buildPrimaryButton(
+                                  text: 'Solicitar servicio',
+                                  onPressed: () async {
+                                    final solicitudId = const Uuid().v4();
+                                    await FirebaseFirestore.instance
+                                        .collection('notificaciones')
+                                        .doc(solicitudId)
+                                        .set({
+                                          'id': solicitudId,
+                                          'clienteId': currentUser.uid,
+                                          'nombreCliente': userDoc.data()?['nombre'] ?? '',
+                                          'proveedorId': uidProveedor,
+                                          'estado': 'pendiente',
+                                          'etapa': '',
+                                          'subcategoria': subcategoria,
+                                          'timestamp': FieldValue.serverTimestamp(),
+                                        });
+                                    Navigator.of(ctx).pop();
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: const Text('Solicitud enviada al proveedor.'),
+                                        backgroundColor: ServiceAppTheme.successColor,
+                                      ),
+                                    );
+                                  },
+                                  icon: Icons.send,
                                 ),
-                              ),
+                              ],
                             );
                           },
-                        ),
-                      );
-                    },
-                  );
-                },
-              ),
-            );
-          },
+                        );
+                      },
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
         );
       },
     );
@@ -140,32 +205,34 @@ class HistorialSolicitudesPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Llamamos al modal solo después de que se haya construido el primer frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _mostrarProveedoresModal(context, subcategoria);
     });
 
     return Scaffold(
+      backgroundColor: ServiceAppTheme.backgroundColor,
       appBar: AppBar(
         title: const Text('Historial de solicitudes'),
         centerTitle: true,
       ),
       body: StreamBuilder<QuerySnapshot>(
-        stream:
-            FirebaseFirestore.instance
-                .collection('notificaciones')
-                .where(
-                  'clienteId',
-                  isEqualTo: FirebaseAuth.instance.currentUser?.uid,
-                )
-                .where('estado', isEqualTo: 'aceptado')
-                .snapshots(),
+        stream: FirebaseFirestore.instance
+            .collection('notificaciones')
+            .where('clienteId', isEqualTo: FirebaseAuth.instance.currentUser?.uid)
+            .where('estado', isEqualTo: 'aceptado')
+            .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return ServiceAppWidgets.buildLoadingIndicator(
+              message: 'Cargando historial...',
+            );
           }
           if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-            return const Center(child: Text('No hay solicitudes aceptadas.'));
+            return ServiceAppWidgets.buildEmptyState(
+              icon: Icons.history,
+              title: 'Sin solicitudes',
+              subtitle: 'No tienes solicitudes aceptadas aún',
+            );
           }
 
           final notificaciones = snapshot.data!.docs;
@@ -178,14 +245,13 @@ class HistorialSolicitudesPage extends StatelessWidget {
               final proveedorId = data['proveedorId'];
 
               return FutureBuilder<DocumentSnapshot>(
-                future:
-                    FirebaseFirestore.instance
-                        .collection('users')
-                        .doc(proveedorId)
-                        .get(),
+                future: FirebaseFirestore.instance
+                    .collection('users')
+                    .doc(proveedorId)
+                    .get(),
                 builder: (context, snap) {
                   if (snap.connectionState == ConnectionState.waiting) {
-                    return const Center(child: CircularProgressIndicator());
+                    return ServiceAppWidgets.buildLoadingIndicator();
                   }
                   if (!snap.hasData || !snap.data!.exists) {
                     return const SizedBox();
@@ -194,73 +260,105 @@ class HistorialSolicitudesPage extends StatelessWidget {
                   final nombre = proveedor['nombre'] ?? 'Proveedor';
                   final telefono = proveedor['celular'] ?? '';
 
-                  return Card(
-                    color: Colors.lightGreen.shade50,
-                    elevation: 3,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Puedes contactarte con el proveedor, sus datos son:',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
+                  return ServiceAppWidgets.buildServiceCard(
+                    backgroundColor: ServiceAppTheme.successColor.withOpacity(0.05),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: ServiceAppTheme.successColor.withOpacity(0.1),
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                              child: const Icon(
+                                Icons.check_circle,
+                                color: ServiceAppTheme.successColor,
+                                size: 24,
+                              ),
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Servicio Aceptado',
+                                    style: ServiceTextStyles.headline3.copyWith(
+                                      color: ServiceAppTheme.successColor,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Puedes contactarte con el proveedor',
+                                    style: ServiceTextStyles.bodySmall,
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 20),
+                        Container(
+                          padding: const EdgeInsets.all(16),
+                          decoration: BoxDecoration(
+                            color: ServiceAppTheme.cardColor,
+                            borderRadius: BorderRadius.circular(12),
+                            border: Border.all(
+                              color: ServiceAppTheme.dividerColor,
+                              width: 1,
                             ),
                           ),
-                          const SizedBox(height: 8),
-                          Text(
-                            'Nombres: $nombre\nCelular: $telefono',
-                            style: const TextStyle(fontSize: 16),
-                          ),
-                          const SizedBox(height: 12),
-                          Row(
+                          child: Column(
                             children: [
-                              Expanded(
-                                child: ElevatedButton.icon(
-                                  onPressed: () {
-                                    final Uri uri = Uri(
-                                      scheme: 'tel',
-                                      path: telefono,
-                                    );
-                                    launchUrl(uri);
-                                  },
-                                  icon: const Icon(Icons.phone),
-                                  label: const Text('Llamar'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.blue,
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.person,
+                                    color: ServiceAppTheme.primaryBlue,
+                                    size: 20,
                                   ),
-                                ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Proveedor: $nombre',
+                                    style: ServiceTextStyles.bodyMedium.copyWith(
+                                      fontWeight: FontWeight.w600,
+                                    ),
+                                  ),
+                                ],
                               ),
-                              const SizedBox(width: 8),
-                              ElevatedButton.icon(
-                                onPressed: () {
-                                  final formatted = telefono.replaceAll(
-                                    RegExp(r'[^0-9]'),
-                                    '',
-                                  );
-                                  final Uri uri = Uri.parse(
-                                    'https://wa.me/51$formatted',
-                                  );
-                                  launchUrl(
-                                    uri,
-                                    mode: LaunchMode.externalApplication,
-                                  );
-                                },
-                                icon: const FaIcon(FontAwesomeIcons.whatsapp),
-                                label: const Text('WhatsApp'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF25D366),
-                                ),
+                              const SizedBox(height: 8),
+                              Row(
+                                children: [
+                                  const Icon(
+                                    Icons.phone,
+                                    color: ServiceAppTheme.primaryBlue,
+                                    size: 20,
+                                  ),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    'Teléfono: $telefono',
+                                    style: ServiceTextStyles.bodyMedium,
+                                  ),
+                                ],
                               ),
                             ],
                           ),
-                        ],
-                      ),
+                        ),
+                        const SizedBox(height: 20),
+                        ServiceAppWidgets.buildActionButtonsRow(
+                          onCallPressed: () {
+                            final Uri uri = Uri(scheme: 'tel', path: telefono);
+                            launchUrl(uri);
+                          },
+                          onWhatsAppPressed: () {
+                            final formatted = telefono.replaceAll(RegExp(r'[^0-9]'), '');
+                            final Uri uri = Uri.parse('https://wa.me/51$formatted');
+                            launchUrl(uri, mode: LaunchMode.externalApplication);
+                          },
+                        ),
+                      ],
                     ),
                   );
                 },
@@ -274,6 +372,9 @@ class HistorialSolicitudesPage extends StatelessWidget {
 }
 
 class _TodoPageState extends State<TodoPage> {
+  // Mapa para mantener el estado de expansión de cada descripción
+  final Map<String, bool> _expandedStates = {};
+
   @override
   void initState() {
     super.initState();
@@ -282,31 +383,42 @@ class _TodoPageState extends State<TodoPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: ServiciosStyles.backgroundColor,
-      appBar: AppBar(title: Text(widget.subcategoria), centerTitle: true),
+      backgroundColor: ServiceAppTheme.backgroundColor,
+      appBar: AppBar(
+        title: Text(widget.subcategoria),
+        centerTitle: true,
+      ),
       body: StreamBuilder<QuerySnapshot>(
-        stream:
-            FirebaseFirestore.instance
-                .collection('servicios')
-                .where('subcategoria', isEqualTo: widget.subcategoria)
-                .where('estado', isEqualTo: "true")
-                .snapshots(),
+        stream: FirebaseFirestore.instance
+            .collection('servicios')
+            .where('subcategoria', isEqualTo: widget.subcategoria)
+            .where('estado', isEqualTo: "true")
+            .snapshots(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
+            return ServiceAppWidgets.buildEmptyState(
+              icon: Icons.error_outline,
+              title: 'Error al cargar',
+              subtitle: 'Ha ocurrido un error al cargar los servicios',
+              iconColor: ServiceAppTheme.errorColor,
+            );
           }
           if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
+            return ServiceAppWidgets.buildLoadingIndicator(
+              message: 'Cargando servicios...',
+            );
           }
           if (snapshot.data!.docs.isEmpty) {
-            return const Center(
-              child: Text('No hay servicios disponibles'),
+            return ServiceAppWidgets.buildEmptyState(
+              icon: Icons.search_off,
+              title: 'Sin servicios',
+              subtitle: 'No hay servicios disponibles en esta categoría',
             );
           }
           return ListView.separated(
             padding: const EdgeInsets.all(16),
             itemCount: snapshot.data!.docs.length,
-            separatorBuilder: (context, index) => const SizedBox(height: 12),
+            separatorBuilder: (context, index) => const SizedBox(height: 16),
             itemBuilder: (context, index) {
               final doc = snapshot.data!.docs[index];
               final servicio = Servicio.fromFirestore(doc);
@@ -322,23 +434,19 @@ class _TodoPageState extends State<TodoPage> {
     final currentUser = FirebaseAuth.instance.currentUser;
     if (currentUser == null) return;
 
-    // Obtener datos del cliente
-    final userDoc =
-        await FirebaseFirestore.instance
-            .collection('users')
-            .doc(currentUser.uid)
-            .get();
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(currentUser.uid)
+        .get();
 
     final nombreCliente = userDoc.data()?['nombre'] ?? '';
     final uidSolicitud = const Uuid().v4();
 
     try {
-      // Obtener los datos del servicio seleccionado
-      final servicioDoc =
-          await FirebaseFirestore.instance
-              .collection('servicios')
-              .doc(idServicio)
-              .get();
+      final servicioDoc = await FirebaseFirestore.instance
+          .collection('servicios')
+          .doc(idServicio)
+          .get();
 
       if (!servicioDoc.exists) {
         print('⚠️ El servicio con ID $idServicio no existe.');
@@ -349,10 +457,6 @@ class _TodoPageState extends State<TodoPage> {
       final proveedorId = data['idusuario'];
       final subcategoria = data['subcategoria'];
 
-      print('➡️ Servicio seleccionado: $idServicio');
-      print('➡️ Proveedor ID: $proveedorId');
-
-      // Crear notificación
       await FirebaseFirestore.instance
           .collection('notificaciones')
           .doc(uidSolicitud)
@@ -378,11 +482,8 @@ class _TodoPageState extends State<TodoPage> {
       future: _getProviderDataAndRating(servicio.idusuario),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Card(
-            child: Padding(
-              padding: EdgeInsets.all(16),
-              child: Center(child: CircularProgressIndicator()),
-            ),
+          return ServiceAppWidgets.buildServiceCard(
+            child: ServiceAppWidgets.buildLoadingIndicator(),
           );
         }
 
@@ -392,179 +493,325 @@ class _TodoPageState extends State<TodoPage> {
         final String fotoPerfilUrl = providerData['fotoPerfil'] ?? '';
         final double promedioCalificaciones = providerData['promedioCalificaciones'] ?? 0.0;
         final int totalCalificaciones = providerData['totalCalificaciones'] ?? 0;
-        
-        // ✅ CORREGIDO: Obtener imagen directamente del servicio, no del usuario
-        final String imagenServicioUrl = servicio.imagen ?? ''; // Asumiendo que el campo se llama 'imagenUrl' en el modelo Servicio
+        final String imagenServicioUrl = servicio.imagen ?? '';
 
-        return Card(
-          elevation: 4,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-          child: Padding(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header con foto de perfil, nombre y calificación
-                Row(
-                  children: [
-                    // Foto de perfil
-                    Container(
-                      width: 50,
-                      height: 50,
-                      decoration: BoxDecoration(
-                        shape: BoxShape.circle,
-                        border: Border.all(color: Colors.grey.shade300, width: 1),
-                      ),
-                      child: ClipOval(
-                        child: fotoPerfilUrl.isNotEmpty
-                            ? Image.network(
-                                fotoPerfilUrl,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return const Icon(Icons.person, size: 30, color: Colors.grey);
-                                },
-                              )
-                            : const Icon(Icons.person, size: 30, color: Colors.grey),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          // Nombre del proveedor
-                          Text(
-                            nombreProveedor,
-                            style: const TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          // Calificación
-                          Row(
-                            children: [
-                              const Icon(Icons.star, color: Colors.amber, size: 16),
-                              const SizedBox(width: 4),
-                              Text(
-                                '${promedioCalificaciones.toStringAsFixed(1)} ($totalCalificaciones)',
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                            ],
-                          ),
-                          // Ubicación
-                          Text(
-                            'Ubicación: $ubicacionProveedor',
-                            style: const TextStyle(
-                              fontSize: 14,
-                              color: Colors.grey,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ),
-                
-                const Divider(height: 20),
-                
-                // Título del servicio
-                Text(
-                  servicio.titulo,
-                  style: const TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                
-                // Imagen del servicio (si existe)
-                if (imagenServicioUrl.isNotEmpty) ...[
-                  Container(
-                    width: double.infinity,
-                    height: 150,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.grey.shade300),
-                    ),
-                    child: ClipRRect(
-                      borderRadius: BorderRadius.circular(8),
-                      child: Image.network(
-                        imagenServicioUrl,
-                        fit: BoxFit.cover,
-                        errorBuilder: (context, error, stackTrace) {
-                          return Container(
-                            color: Colors.grey.shade200,
-                            child: const Icon(Icons.image_not_supported, size: 50, color: Colors.grey),
-                          );
-                        },
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                ],
-                
-                // Descripción del servicio
-                Text(
-                  servicio.descripcion,
-                  style: const TextStyle(fontSize: 14, color: Colors.grey),
-                  maxLines: 3,
-                  overflow: TextOverflow.ellipsis,
-                ),
-                const SizedBox(height: 12),
-                
-                // Botones de acción
-                Row(
-                  children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () async {
-                          await _crearSolicitudAceptadaDesdeServicio(servicio.id);
-                          final Uri uri = Uri(
-                            scheme: 'tel',
-                            path: servicio.telefono,
-                          );
-                          launchUrl(uri);
-                        },
-                        icon: const Icon(Icons.phone),
-                        label: const Text('Llamar'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                          foregroundColor: Colors.white,
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    ElevatedButton.icon(
-                      onPressed: () async {
-                        await _crearSolicitudAceptadaDesdeServicio(servicio.id);
-                        final formatted = servicio.telefono.replaceAll(
-                          RegExp(r'[^0-9]'),
-                          '',
-                        );
-                        final Uri uri = Uri.parse('https://wa.me/51$formatted');
-                        launchUrl(uri, mode: LaunchMode.externalApplication);
-                      },
-                      icon: const FaIcon(FontAwesomeIcons.whatsapp),
-                      label: const Text('WhatsApp'),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF25D366),
-                        foregroundColor: Colors.white,
-                      ),
-                    ),
-                  ],
-                ),
+        return ServiceAppWidgets.buildServiceCard(
+          useGradient: true,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Header con información del proveedor
+              _buildProviderHeader(
+                nombreProveedor,
+                ubicacionProveedor,
+                fotoPerfilUrl,
+                promedioCalificaciones,
+                totalCalificaciones,
+              ),
+              
+              const SizedBox(height: 20),
+              
+              // Título del servicio
+              Text(
+                servicio.titulo,
+                style: ServiceTextStyles.headline3,
+              ),
+              
+              const SizedBox(height: 12),
+              
+              // Imagen del servicio (si existe)
+              if (imagenServicioUrl.isNotEmpty) ...[
+                _buildServiceImage(imagenServicioUrl),
+                const SizedBox(height: 16),
               ],
-            ),
+              
+              // Descripción expandible del servicio
+              _buildExpandableDescription(servicio.descripcion, servicio.id),
+              
+              const SizedBox(height: 20),
+              
+              // Botones de acción
+              ServiceAppWidgets.buildActionButtonsRow(
+                onCallPressed: () async {
+                  await _crearSolicitudAceptadaDesdeServicio(servicio.id);
+                  final Uri uri = Uri(scheme: 'tel', path: servicio.telefono);
+                  launchUrl(uri);
+                },
+                onWhatsAppPressed: () async {
+                  await _crearSolicitudAceptadaDesdeServicio(servicio.id);
+                  final formatted = servicio.telefono.replaceAll(RegExp(r'[^0-9]'), '');
+                  final Uri uri = Uri.parse('https://wa.me/51$formatted');
+                  launchUrl(uri, mode: LaunchMode.externalApplication);
+                },
+              ),
+            ],
           ),
         );
       },
     );
   }
 
-  // ✅ CORREGIDO: Ya no busca 'imagenServicio' en la colección 'users'
+  Widget _buildProviderHeader(
+    String nombre,
+    String ubicacion,
+    String fotoUrl,
+    double rating,
+    int totalRatings,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: ServiceAppTheme.cardColor,
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: ServiceAppTheme.dividerColor.withOpacity(0.5),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          // Avatar del proveedor
+          Container(
+            width: 56,
+            height: 56,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: ServiceAppTheme.primaryGradient,
+              boxShadow: ServiceAppTheme.softShadow,
+            ),
+            child: Container(
+              margin: const EdgeInsets.all(2),
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white,
+              ),
+              child: ClipOval(
+                child: fotoUrl.isNotEmpty
+                    ? Image.network(
+                        fotoUrl,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) =>
+                            const Icon(Icons.person, size: 28, color: ServiceAppTheme.mutedTextColor),
+                      )
+                    : const Icon(Icons.person, size: 28, color: ServiceAppTheme.mutedTextColor),
+              ),
+            ),
+          ),
+          const SizedBox(width: 16),
+          
+          // Información del proveedor
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  nombre,
+                  style: ServiceTextStyles.headline3.copyWith(fontSize: 16),
+                ),
+                const SizedBox(height: 4),
+                Row(
+                  children: [
+                    const Icon(
+                      Icons.location_on_rounded,
+                      size: 16,
+                      color: ServiceAppTheme.mutedTextColor,
+                    ),
+                    const SizedBox(width: 4),
+                    Expanded(
+                      child: Text(
+                        ubicacion,
+                        style: ServiceTextStyles.bodySmall,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                _buildRatingRow(rating, totalRatings),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildServiceImage(String imageUrl) {
+    return Container(
+      width: double.infinity,
+      height: 200,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: ServiceAppTheme.softShadow,
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(16),
+        child: Image.network(
+          imageUrl,
+          fit: BoxFit.cover,
+          errorBuilder: (context, error, stackTrace) {
+            return Container(
+              decoration: BoxDecoration(
+                color: ServiceAppTheme.lightBlue,
+                borderRadius: BorderRadius.circular(16),
+              ),
+              child: const Center(
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.image_not_supported,
+                      size: 48,
+                      color: ServiceAppTheme.mutedTextColor,
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'Imagen no disponible',
+                      style: TextStyle(
+                        color: ServiceAppTheme.mutedTextColor,
+                        fontSize: 14,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          },
+        ),
+      ),
+    );
+  }
+
+  Widget _buildExpandableDescription(String description, String servicioId) {
+  return LayoutBuilder(
+    builder: (context, constraints) {
+      final textSpan = TextSpan(
+        text: description,
+        style: ServiceTextStyles.bodyMedium,
+      );
+      final textPainter = TextPainter(
+        text: textSpan,
+        maxLines: 3,
+        textDirection: TextDirection.ltr,
+      );
+      textPainter.layout(maxWidth: constraints.maxWidth);
+      
+      final isTextOverflowing = textPainter.didExceedMaxLines;
+      
+      return StatefulBuilder(
+        builder: (context, setLocalState) {
+          final bool isExpanded = _expandedStates[servicioId] ?? false;
+          
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: ServiceAppTheme.lightBlue.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: ServiceAppTheme.primaryBlue,
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: const Text(
+                            'Descripción',
+                            style: TextStyle(
+                              color: ServiceAppTheme.onPrimaryTextColor,
+                              fontSize: 12,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                      child: Text(
+                        description,
+                        style: ServiceTextStyles.bodyMedium,
+                        maxLines: isExpanded ? null : 3,
+                        overflow: isExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
+                      ),
+                    ),
+                    if (isTextOverflowing) ...[
+                      const SizedBox(height: 8),
+                      GestureDetector(
+                        onTap: () {
+                          setLocalState(() {
+                            _expandedStates[servicioId] = !isExpanded;
+                          });
+                        },
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              isExpanded ? 'Ver menos' : 'Ver más',
+                              style: ServiceTextStyles.bodySmall.copyWith(
+                                color: ServiceAppTheme.primaryBlue,
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                            const SizedBox(width: 4),
+                            AnimatedRotation(
+                              turns: isExpanded ? 0.5 : 0.0,
+                              duration: const Duration(milliseconds: 300),
+                              child: const Icon(
+                                Icons.expand_more,
+                                color: ServiceAppTheme.primaryBlue,
+                                size: 20,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ],
+          );
+        },
+      );
+    },
+  );
+}
+
+  Widget _buildRatingRow(double rating, int totalRatings) {
+    return Row(
+      children: [
+        ...List.generate(5, (index) {
+          return Icon(
+            index < rating.floor() 
+                ? Icons.star_rounded 
+                : (index < rating) 
+                    ? Icons.star_half_rounded 
+                    : Icons.star_outline_rounded,
+            size: 16,
+            color: const Color(0xFFFFB800),
+          );
+        }),
+        const SizedBox(width: 8),
+        Text(
+          '${rating.toStringAsFixed(1)} ($totalRatings)',
+          style: ServiceTextStyles.bodySmall.copyWith(
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+
   Future<Map<String, dynamic>> _getProviderDataAndRating(String proveedorId) async {
     final Map<String, dynamic> result = {};
     
@@ -580,7 +827,6 @@ class _TodoPageState extends State<TodoPage> {
         result['nombre'] = data['nombre'] ?? 'Proveedor';
         result['ubicacion'] = data['ubicacion'] ?? 'Sin ubicación';
         result['fotoPerfil'] = data['fotoPerfil'] ?? '';
-        // ❌ REMOVIDO: result['imagenServicio'] = data['imagenServicio'] ?? '';
       }
       
       // Obtener calificaciones del proveedor
@@ -615,44 +861,5 @@ class _TodoPageState extends State<TodoPage> {
     }
     
     return result;
-  }
-
-  Widget _buildRatingSection(Servicio servicio) {
-    return Column(
-      children: [
-        Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Icon(Icons.star, color: Colors.amber, size: 20),
-            const SizedBox(width: 4),
-            Text(
-              servicio.promedioCalificaciones?.toStringAsFixed(1) ?? '0.0',
-              style: const TextStyle(fontWeight: FontWeight.bold),
-            ),
-          ],
-        ),
-        Text(
-          '(${servicio.totalCalificaciones ?? 0})',
-          style: const TextStyle(fontSize: 12, color: Colors.grey),
-        ),
-      ],
-    );
-  }
-
-  void _makePhoneCall(String phoneNumber) async {
-    final Uri phoneUri = Uri(scheme: 'tel', path: phoneNumber);
-    if (await canLaunchUrl(phoneUri)) {
-      await launchUrl(phoneUri);
-    }
-  }
-
-  void _openWhatsApp(String phoneNumber) async {
-    final formattedNumber = phoneNumber.replaceAll(RegExp(r'[^0-9]'), '');
-    final Uri whatsappUri = Uri.parse(
-      'https://wa.me/51$formattedNumber?text=Hola,%20estoy%20interesado%20en%20tu%20servicio',
-    );
-    if (await canLaunchUrl(whatsappUri)) {
-      await launchUrl(whatsappUri);
-    }
   }
 }
