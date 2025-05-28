@@ -385,9 +385,20 @@ class _TodoPageState extends State<TodoPage> {
     return Scaffold(
       backgroundColor: ServiceAppTheme.backgroundColor,
       appBar: AppBar(
-        title: Text(widget.subcategoria),
-        centerTitle: true,
+      title: Text(
+        widget.subcategoria,
+        style: const TextStyle(
+          fontSize: 16, // Reduce el tamaño si es necesario
+          fontWeight: FontWeight.w600,
+        ),
+        textAlign: TextAlign.center,
+        overflow: TextOverflow.ellipsis, // Trunca con "..." si es muy largo
+        maxLines: 1, // Máximo una línea
       ),
+      centerTitle: true,
+      // Opcional: Agregar más espacio si es necesario
+      titleSpacing: 0,
+    ),
       body: StreamBuilder<QuerySnapshot>(
         stream: FirebaseFirestore.instance
             .collection('servicios')
