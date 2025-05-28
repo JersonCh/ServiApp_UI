@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:serviapp/modelo/global_user.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:uuid/uuid.dart';
 
 class MisFavoritosPage extends StatefulWidget {
   @override
@@ -70,6 +72,267 @@ class _MisFavoritosPageState extends State<MisFavoritosPage> {
         ),
       );
     }
+  }
+
+  void mostrarContactoModal(
+    BuildContext context,
+    String servicioId,
+    String proveedorId,
+    String subcategoria,
+  ) async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Debes iniciar sesión para contactar.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Primero verificar si el proveedor está conectado
+    final proveedorDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(proveedorId)
+        .get();
+
+    if (!proveedorDoc.exists) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('Proveedor no encontrado.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    final proveedorData = proveedorDoc.data() as Map<String, dynamic>;
+    final estaConectado = proveedorData['isOnline'] == true;
+
+    if (!estaConectado) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: const Text('El proveedor no está disponible en este momento.'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    final userDoc = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(currentUser.uid)
+        .get();
+
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      builder: (ctx) {
+        return DraggableScrollableSheet(
+          expand: false,
+          initialChildSize: 0.6,
+          builder: (ctx, scrollController) {
+            return Scaffold(
+              appBar: AppBar(
+                automaticallyImplyLeading: false,
+                title: const Text('Contactar Proveedor'),
+                actions: [
+                  IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(ctx).pop(),
+                  ),
+                ],
+              ),
+              body: StreamBuilder<QuerySnapshot>(
+                stream: FirebaseFirestore.instance
+                    .collection('servicios')
+                    .where(FieldPath.documentId, isEqualTo: servicioId)
+                    .where('estado', isEqualTo: "true")
+                    .snapshots(),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  if (snapshot.hasError) {
+                    return Center(child: Text('Error: ${snapshot.error}'));
+                  }
+                  
+                  final docs = snapshot.data?.docs ?? [];
+                  if (docs.isEmpty) {
+                    return const Center(
+                      child: Text('Este servicio ya no está disponible.'),
+                    );
+                  }
+
+                  final data = docs[0].data() as Map<String, dynamic>;
+                  final titulo = data['titulo'] ?? 'Servicio sin título';
+                  final descripcion = data['descripcion'] ?? 'Sin descripción';
+
+                  // Verificar nuevamente el estado de conexión del proveedor en tiempo real
+                  return StreamBuilder<DocumentSnapshot>(
+                    stream: FirebaseFirestore.instance
+                        .collection('users')
+                        .doc(proveedorId)
+                        .snapshots(),
+                    builder: (context, userSnapshot) {
+                      if (userSnapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+
+                      if (!userSnapshot.hasData || !userSnapshot.data!.exists) {
+                        return const Center(
+                          child: Text('No se encontraron proveedores disponibles.'),
+                        );
+                      }
+
+                      final userData = userSnapshot.data!.data() as Map<String, dynamic>? ?? {};
+                      final conectado = userData['isOnline'] == true;
+                      
+                      if (!conectado) {
+                        return const Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.wifi_off,
+                                size: 64,
+                                color: Colors.grey,
+                              ),
+                              SizedBox(height: 16),
+                              Text(
+                                'No se encontraron proveedores disponibles.',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.grey,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                              SizedBox(height: 8),
+                              Text(
+                                'El proveedor no está conectado actualmente.',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.grey,
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+
+                      final nombre = userData['nombre'] ?? 'Proveedor sin nombre';
+                      final celular = userData['celular'] ?? 'Número no disponible';
+
+                      return Padding(
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            // Indicador de estado conectado
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: Colors.green[100],
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: Colors.green),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Container(
+                                    width: 8,
+                                    height: 8,
+                                    decoration: BoxDecoration(
+                                      color: Colors.green,
+                                      shape: BoxShape.circle,
+                                    ),
+                                  ),
+                                  const SizedBox(width: 6),
+                                  const Text(
+                                    'Conectado',
+                                    style: TextStyle(
+                                      color: Colors.green,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            const SizedBox(height: 16),
+                            Card(
+                              child: Padding(
+                                padding: const EdgeInsets.all(16),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(titulo, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                                    const SizedBox(height: 8),
+                                    Text('Proveedor: $nombre', style: TextStyle(fontSize: 16)),
+                                    Text('Celular: $celular', style: TextStyle(fontSize: 16)),
+                                    const SizedBox(height: 12),
+                                    Text(descripcion, maxLines: 3, overflow: TextOverflow.ellipsis),
+                                  ],
+                                ),
+                              ),
+                            ),
+                            const SizedBox(height: 20),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton(
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.blue,
+                                  padding: const EdgeInsets.symmetric(vertical: 16),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(12),
+                                  ),
+                                ),
+                                child: const Text(
+                                  'Contactar',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                                onPressed: () async {
+                                  final solicitudId = const Uuid().v4();
+                                  await FirebaseFirestore.instance
+                                      .collection('notificaciones')
+                                      .doc(solicitudId)
+                                      .set({
+                                        'id': solicitudId,
+                                        'clienteId': currentUser.uid,
+                                        'nombreCliente': userDoc.data()?['nombre'] ?? '',
+                                        'proveedorId': proveedorId,
+                                        'estado': 'pendiente',
+                                        'etapa': '',
+                                        'subcategoria': subcategoria,
+                                        'timestamp': FieldValue.serverTimestamp(),
+                                      });
+                                  Navigator.of(ctx).pop();
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Solicitud enviada al proveedor.'),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  );
+                },
+              ),
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -277,9 +540,26 @@ class _MisFavoritosPageState extends State<MisFavoritosPage> {
                                   ],
                                 ),
                               ),
-                              // Botón eliminar
+                              // Botones de acción
                               Column(
                                 children: [
+                                  IconButton(
+                                    icon: Icon(Icons.message, color: Colors.blue),
+                                    onPressed: () => mostrarContactoModal(
+                                      context,
+                                      servicioId,
+                                      proveedorId,
+                                      subcategoria,
+                                    ),
+                                  ),
+                                  Text(
+                                    'Contactar',
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      color: Colors.blue,
+                                    ),
+                                  ),
+                                  SizedBox(height: 8),
                                   IconButton(
                                     icon: Icon(Icons.star, color: Colors.amber),
                                     onPressed: () => eliminarFavorito(favoritoId),
