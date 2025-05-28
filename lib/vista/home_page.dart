@@ -359,7 +359,7 @@ class _HomeContent extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text('Servicios populares', style: kTitleStyle),
-              TextButton(onPressed: () {}, child: const Text('Ver todos')),
+              //TextButton(onPressed: () {}, child: const Text('Ver todos')),
             ],
           ),
           const SizedBox(height: 12),
