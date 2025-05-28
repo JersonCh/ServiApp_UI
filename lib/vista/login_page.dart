@@ -98,7 +98,7 @@ class _LoginPageState extends State<LoginPage> {
                   // lógica para recuperar contraseña
                 },
                 child: const Text(
-                  "Forget Password ?",
+                  "¿Has olvidado tu contraseña?",
                   style: LoginStyles.linkStyle,
                 ),
               ),
@@ -142,7 +142,7 @@ class _LoginPageState extends State<LoginPage> {
                   );
                 },
                 child: const Text(
-                  "Don’t have an account? Sign Up",
+                  "¿No tienes una cuenta? Regístrate",
                   style: LoginStyles.linkStyle,
                 ),
               ),
