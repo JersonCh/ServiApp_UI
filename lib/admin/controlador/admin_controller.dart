@@ -84,6 +84,9 @@ class AdminController {
     
     if (filtroRol != null && filtroRol.isNotEmpty) {
       query = query.where('rol', isEqualTo: filtroRol);
+    } else {
+      // Solo mostrar clientes y proveedores si no hay filtro
+      query = query.where('rol', whereIn: ['cliente', 'proveedor']);
     }
     
     return query.snapshots();
