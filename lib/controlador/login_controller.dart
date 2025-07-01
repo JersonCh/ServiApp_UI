@@ -23,6 +23,17 @@ class LoginController {
           Map<String, dynamic> userData =
               userDoc.data() as Map<String, dynamic>;
 
+          // VALIDACIÓN DE USUARIO BLOQUEADO - Verificar si el usuario está bloqueado
+          // Si el campo 'bloqueado' existe y es true, denegar el acceso
+          bool estaBloqueado = userData['bloqueado'] ?? false; // Por defecto false si no existe el campo
+          
+          if (estaBloqueado) {
+            // Cerrar la sesión inmediatamente si el usuario está bloqueado
+            await _auth.signOut();
+            return {'error': 'blocked', 'message': 'Tu cuenta ha sido bloqueada. Contacta al administrador.'};
+          }
+          // FIN VALIDACIÓN DE USUARIO BLOQUEADO
+
           // Actualizar isOnline a true
           await _firestore.collection('users').doc(user.uid).update({
             'isOnline': true,

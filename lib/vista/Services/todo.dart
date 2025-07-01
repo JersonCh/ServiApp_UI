@@ -78,7 +78,16 @@ class HistorialSolicitudesPage extends StatelessWidget {
                   }
 
                   final docs = snapshot.data?.docs ?? [];
-                  if (docs.isEmpty) {
+                  
+                  // FILTRO PARA SERVICIOS BLOQUEADOS - Filtrar en código para compatibilidad
+                  final docsNoBloqueados = docs.where((doc) {
+                    final data = doc.data() as Map<String, dynamic>;
+                    final bloqueado = data['bloqueado'] ?? false; // Si no existe el campo, asume false
+                    return !bloqueado; // Solo mostrar servicios no bloqueados
+                  }).toList();
+                  // FIN FILTRO PARA SERVICIOS BLOQUEADOS
+                  
+                  if (docsNoBloqueados.isEmpty) {
                     return const Center(
                       child: Text('No se encontraron proveedores disponibles.'),
                     );
@@ -86,9 +95,9 @@ class HistorialSolicitudesPage extends StatelessWidget {
 
                   return ListView.builder(
                     controller: scrollController,
-                    itemCount: docs.length,
+                    itemCount: docsNoBloqueados.length,
                     itemBuilder: (context, index) {
-                      final data = docs[index].data() as Map<String, dynamic>;
+                      final data = docsNoBloqueados[index].data() as Map<String, dynamic>;
                       final uidProveedor = data['idusuario']; // ✅ Cambiar a 'idusuario'
                       final titulo = data['titulo'] ?? 'Servicio sin título';
                       final descripcion = data['descripcion'] ?? 'Sin descripción';
@@ -375,7 +384,16 @@ class _TodoPageState extends State<TodoPage> {
               message: 'Cargando servicios...',
             );
           }
-          if (snapshot.data!.docs.isEmpty) {
+          
+          // FILTRO PARA SERVICIOS BLOQUEADOS - Filtrar en código para compatibilidad
+          final docsNoBloqueados = snapshot.data!.docs.where((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            final bloqueado = data['bloqueado'] ?? false; // Si no existe el campo, asume false
+            return !bloqueado; // Solo mostrar servicios no bloqueados
+          }).toList();
+          // FIN FILTRO PARA SERVICIOS BLOQUEADOS
+          
+          if (docsNoBloqueados.isEmpty) {
             return ServiceAppWidgets.buildEmptyState(
               icon: Icons.search_off,
               title: 'Sin servicios',
@@ -384,10 +402,10 @@ class _TodoPageState extends State<TodoPage> {
           }
           return ListView.separated(
             padding: const EdgeInsets.all(16),
-            itemCount: snapshot.data!.docs.length,
+            itemCount: docsNoBloqueados.length,
             separatorBuilder: (context, index) => const SizedBox(height: 16),
             itemBuilder: (context, index) {
-              final doc = snapshot.data!.docs[index];
+              final doc = docsNoBloqueados[index];
               final servicio = Servicio.fromFirestore(doc);
               return _buildServiceCard(context, servicio);
             },
@@ -511,6 +529,12 @@ class _TodoPageState extends State<TodoPage> {
                   launchUrl(uri, mode: LaunchMode.externalApplication);
                 },
               ),
+              
+              const SizedBox(height: 12),
+              
+              // BOTÓN DE REPORTAR - Permite reportar la publicación
+              _buildReportButton(context, servicio.id, servicio.titulo),
+              // FIN BOTÓN DE REPORTAR
             ],
           ),
         );
@@ -829,4 +853,284 @@ class _TodoPageState extends State<TodoPage> {
     
     return result;
   }
+
+  // SISTEMA DE REPORTES - Métodos para reportar publicaciones
+
+  /// Construye el botón de reportar publicación
+  Widget _buildReportButton(BuildContext context, String servicioId, String tituloServicio) {
+    return Container(
+      width: double.infinity,
+      child: OutlinedButton.icon(
+        onPressed: () => _mostrarModalReporte(context, servicioId, tituloServicio),
+        icon: Icon(Icons.flag_outlined, color: Colors.red.shade600),
+        label: Text(
+          'Reportar publicación',
+          style: TextStyle(color: Colors.red.shade600),
+        ),
+        style: OutlinedButton.styleFrom(
+          side: BorderSide(color: Colors.red.shade300),
+          padding: EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(8),
+          ),
+        ),
+      ),
+    );
+  }
+
+  /// Muestra el modal para reportar una publicación
+  void _mostrarModalReporte(BuildContext context, String servicioId, String tituloServicio) async {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Debes iniciar sesión para reportar una publicación'),
+          backgroundColor: Colors.red,
+        ),
+      );
+      return;
+    }
+
+    // Verificar si ya reportó esta publicación
+    final yaReporto = await _verificarSiYaReporto(currentUser.uid, servicioId);
+    if (yaReporto) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Ya has reportado esta publicación anteriormente'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // Verificar que no sea su propia publicación
+    final propiaPublicacion = await _verificarSiEsPropiaPublicacion(currentUser.uid, servicioId);
+    if (propiaPublicacion) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('No puedes reportar tu propia publicación'),
+          backgroundColor: Colors.orange,
+        ),
+      );
+      return;
+    }
+
+    // Mostrar modal de reporte
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (context) => _buildModalReporte(context, servicioId, tituloServicio),
+    );
+  }
+
+  /// Construye el modal de reporte
+  Widget _buildModalReporte(BuildContext context, String servicioId, String tituloServicio) {
+    String? motivoSeleccionado;
+    TextEditingController descripcionController = TextEditingController();
+    
+    final List<String> motivosReporte = [
+      'Contenido inapropiado',
+      'Información falsa o engañosa',
+      'Spam o contenido repetitivo', 
+      'Precios excesivos',
+      'Servicio inexistente o no disponible',
+      'Otro',
+    ];
+
+    return StatefulBuilder(
+      builder: (context, setState) {
+        return Container(
+          padding: EdgeInsets.only(
+            bottom: MediaQuery.of(context).viewInsets.bottom,
+          ),
+          child: Padding(
+            padding: EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(
+                      'Reportar publicación',
+                      style: TextStyle(
+                        fontSize: 20,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    IconButton(
+                      onPressed: () => Navigator.pop(context),
+                      icon: Icon(Icons.close),
+                    ),
+                  ],
+                ),
+                
+                SizedBox(height: 8),
+                
+                Text(
+                  'Servicio: $tituloServicio',
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey.shade600,
+                  ),
+                ),
+                
+                SizedBox(height: 20),
+                
+                Text(
+                  '¿Por qué reportas esta publicación?',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                
+                SizedBox(height: 12),
+                
+                // Lista de motivos
+                ...motivosReporte.map((motivo) => RadioListTile<String>(
+                  title: Text(motivo),
+                  value: motivo,
+                  groupValue: motivoSeleccionado,
+                  onChanged: (value) {
+                    setState(() {
+                      motivoSeleccionado = value;
+                    });
+                  },
+                )).toList(),
+                
+                // Campo de descripción (solo si selecciona "Otro")
+                if (motivoSeleccionado == 'Otro') ...[
+                  SizedBox(height: 12),
+                  TextField(
+                    controller: descripcionController,
+                    decoration: InputDecoration(
+                      labelText: 'Describe el motivo',
+                      hintText: 'Explica por qué reportas esta publicación',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 3,
+                  ),
+                ],
+                
+                SizedBox(height: 20),
+                
+                // Botones
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: Text('Cancelar'),
+                      ),
+                    ),
+                    SizedBox(width: 12),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: motivoSeleccionado == null ? null : () async {
+                          final descripcion = motivoSeleccionado == 'Otro' 
+                              ? descripcionController.text.trim()
+                              : '';
+                          
+                          if (motivoSeleccionado == 'Otro' && descripcion.isEmpty) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Por favor describe el motivo del reporte'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                            return;
+                          }
+                          
+                          Navigator.pop(context);
+                          await _enviarReporte(servicioId, motivoSeleccionado!, descripcion);
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: Text('Reportar'),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  /// Verifica si el usuario ya reportó esta publicación
+  Future<bool> _verificarSiYaReporto(String usuarioId, String servicioId) async {
+    try {
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('reportes')
+          .where('usuarioId', isEqualTo: usuarioId)
+          .where('servicioId', isEqualTo: servicioId)
+          .get();
+      
+      return querySnapshot.docs.isNotEmpty;
+    } catch (e) {
+      print('Error verificando reporte: $e');
+      return false;
+    }
+  }
+
+  /// Verifica si es su propia publicación
+  Future<bool> _verificarSiEsPropiaPublicacion(String usuarioId, String servicioId) async {
+    try {
+      final servicioDoc = await FirebaseFirestore.instance
+          .collection('servicios')
+          .doc(servicioId)
+          .get();
+      
+      if (!servicioDoc.exists) return false;
+      
+      final data = servicioDoc.data() as Map<String, dynamic>;
+      return data['idusuario'] == usuarioId;
+    } catch (e) {
+      print('Error verificando propiedad: $e');
+      return false;
+    }
+  }
+
+  /// Envía el reporte a Firebase
+  Future<void> _enviarReporte(String servicioId, String motivo, String descripcion) async {
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) return;
+
+      await FirebaseFirestore.instance.collection('reportes').add({
+        'servicioId': servicioId,
+        'usuarioId': currentUser.uid,
+        'motivo': motivo,
+        'descripcion': descripcion,
+        'fechaReporte': FieldValue.serverTimestamp(),
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Reporte enviado correctamente. Gracias por tu colaboración.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } catch (e) {
+      print('Error enviando reporte: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error al enviar el reporte. Inténtalo nuevamente.'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+  
+  // FIN SISTEMA DE REPORTES
 }

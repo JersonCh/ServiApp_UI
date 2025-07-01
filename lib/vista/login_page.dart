@@ -4,6 +4,7 @@ import 'package:serviapp/vista/home_proveedor_page.dart';
 import 'package:serviapp/vista/usuario/select_user_type_page.dart';
 import 'package:serviapp/controlador/login_controller.dart';
 import 'package:serviapp/styles/login_styles.dart';
+import 'package:serviapp/admin/vista/admin_home_page.dart';
 
 class LoginPage extends StatefulWidget {
   @override
@@ -25,11 +26,29 @@ class _LoginPageState extends State<LoginPage> {
     if (!mounted) return;
 
     if (result != null) {
+      // VALIDACIÓN DE USUARIO BLOQUEADO - Verificar si el resultado indica usuario bloqueado
+      if (result.containsKey('error') && result['error'] == 'blocked') {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(result['message'] ?? 'Tu cuenta ha sido bloqueada'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 4),
+          ),
+        );
+        return; // Salir del método sin redirigir
+      }
+      // FIN VALIDACIÓN DE USUARIO BLOQUEADO
+
       // Depuración - verifica el rol que está llegando
       print("ROL DEL USUARIO: ${result['rol']}");
 
       // Comparación exacta de strings
-      if (result['rol'] == 'proveedor') {
+      if (result['rol'] == 'Admin') {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => AdminHomePage()),
+        );
+      } else if (result['rol'] == 'proveedor') {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(builder: (context) => HomeProveedorPage()),

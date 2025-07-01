@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'vista/login_page.dart';
 import 'vista/home_page.dart';
 import 'vista/home_proveedor_page.dart';
+import 'admin/vista/admin_home_page.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,6 +22,7 @@ class MyApp extends StatelessWidget {
         '/home': (context) => HomePage(),
         '/login': (context) => LoginPage(),
         '/home_proveedor': (context) => HomeProveedorPage(),
+        '/admin': (context) => AdminHomePage(),
       },
     );
   }
