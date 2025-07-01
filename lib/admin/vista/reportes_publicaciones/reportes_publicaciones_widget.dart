@@ -88,6 +88,37 @@ class _ReportesPublicacionesWidgetState extends State<ReportesPublicacionesWidge
     }
   }
 
+  // Método para obtener el nombre del usuario
+  Future<String> _obtenerNombreUsuario(String usuarioId) async {
+    try {
+      final doc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(usuarioId)
+          .get();
+      
+      if (doc.exists) {
+        final data = doc.data() as Map<String, dynamic>;
+        return data['nombre'] ?? 'Usuario sin nombre';
+      } else {
+        return 'Usuario no encontrado';
+      }
+    } catch (e) {
+      print('Error al obtener nombre del usuario: $e');
+      return 'Error al cargar nombre';
+    }
+  }
+
+  // Método para formatear fecha
+  String _formatearFecha(dynamic fecha) {
+    if (fecha == null) return 'Sin fecha';
+    try {
+      final DateTime fechaDate = fecha is DateTime ? fecha : fecha.toDate();
+      return '${fechaDate.day}/${fechaDate.month}/${fechaDate.year} ${fechaDate.hour.toString().padLeft(2, '0')}:${fechaDate.minute.toString().padLeft(2, '0')}';
+    } catch (e) {
+      return 'Fecha inválida';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -399,11 +430,27 @@ class _ReportesPublicacionesWidgetState extends State<ReportesPublicacionesWidge
                                 ),
                               ],
                               SizedBox(height: 4),
+                              FutureBuilder<String>(
+                                future: _obtenerNombreUsuario(reporteIndividual['usuarioId']),
+                                builder: (context, snapshot) {
+                                  final nombreUsuario = snapshot.data ?? 'Cargando...';
+                                  return Text(
+                                    'Usuario: $nombreUsuario',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: Colors.grey.shade600,
+                                    ),
+                                    overflow: TextOverflow.ellipsis,
+                                    maxLines: 1,
+                                  );
+                                },
+                              ),
+                              SizedBox(height: 4),
                               Text(
-                                'Usuario: ${reporteIndividual['usuarioId']}',
+                                'Fecha: ${_formatearFecha(reporteIndividual['fechaReporte'])}',
                                 style: TextStyle(
                                   fontSize: 12,
-                                  color: Colors.grey.shade600,
+                                  color: Colors.grey.shade500,
                                 ),
                                 overflow: TextOverflow.ellipsis,
                                 maxLines: 1,
