@@ -534,14 +534,17 @@ class _HomeContentState extends State<_HomeContent> {
                       ),
                     ),
                     const SizedBox(height: 8),
-                    Text(
-                      servicioData['descripcion'] ?? 'Sin descripción',
-                      style: TextStyle(
-                        color: Colors.white.withOpacity(0.8),
-                        fontSize: 12,
+                    Flexible(
+                      child: Text(
+                        servicioData['descripcion'] ?? 'Sin descripción',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.8),
+                          fontSize: 12,
+                        ),
+                        maxLines: 3, // Puedes usar 2, 3, o el número que prefieras
+                        overflow: TextOverflow.ellipsis,
+                        softWrap: true,
                       ),
-                      maxLines: 2,
-                      overflow: TextOverflow.ellipsis,
                     ),
                   ],
                 ),

@@ -23,6 +23,115 @@ class _MisServiciosPageState extends State<MisServiciosPage> {
     _cargarServicios();
   }
 
+  Future<int?> _mostrarSeleccionPlan(BuildContext context) async {
+    int? seleccion;
+    await showDialog(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: Text('Selecciona un plan'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              title: Text('3 días'),
+              onTap: () {
+                seleccion = 3;
+                Navigator.of(ctx).pop();
+              },
+            ),
+            ListTile(
+              title: Text('7 días'),
+              onTap: () {
+                seleccion = 7;
+                Navigator.of(ctx).pop();
+              },
+            ),
+            ListTile(
+              title: Text('15 días'),
+              onTap: () {
+                seleccion = 15;
+                Navigator.of(ctx).pop();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+    return seleccion;
+  }
+
+  Future<bool> _mostrarDialogoExtenderPromocion(BuildContext context, Timestamp promoFin, int diasExtra) async {
+    final fechaActual = promoFin.toDate();
+    final nuevaFecha = fechaActual.add(Duration(days: diasExtra));
+
+    return await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (ctx) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Row(
+          children: [
+            Icon(Icons.warning_amber_rounded, color: Colors.orange, size: 28),
+            SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                '¡Ya estás promocionando!',
+                style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Este servicio ya está siendo promocionado.',
+              style: TextStyle(fontSize: 16),
+            ),
+            SizedBox(height: 10),
+            Text(
+              'Actualmente la promoción termina el:',
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+            Text(
+              '${fechaActual.day}/${fechaActual.month}/${fechaActual.year}',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+            ),
+            SizedBox(height: 16),
+            Text(
+              'Si continúas, la promoción se extenderá hasta:',
+              style: TextStyle(color: Colors.grey[600]),
+            ),
+            Text(
+              '${nuevaFecha.day}/${nuevaFecha.month}/${nuevaFecha.year}',
+              style: TextStyle(
+                fontWeight: FontWeight.bold, fontSize: 16, color: Colors.green[800]
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: Text('Cancelar', style: TextStyle(color: Colors.grey[700])),
+          ),
+          ElevatedButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.amber[800],
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: Text('Continuar'),
+          ),
+        ],
+      ),
+    ) ?? false;
+  }
+
   Future<void> _cargarServicios() async {
     try {
       setState(() => _isLoading = true);
@@ -541,15 +650,33 @@ class _MisServiciosPageState extends State<MisServiciosPage> {
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
                     ElevatedButton.icon(
-                      onPressed: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => PromocionarServicioPage(servicio: servicio),
-                          ),
-                        ).then((_) {
-                          _cargarServicios(); // recarga lista al volver de promocionar
-                        });
+                      onPressed: () async {
+                        if (promocionando && promoFin != null) {
+                          // 1. Selecciona el plan
+                          int? nuevosDias = await _mostrarSeleccionPlan(context);
+                          if (nuevosDias == null) return;
+
+                          // 2. Muestra el diálogo de advertencia
+                          bool continuar = await _mostrarDialogoExtenderPromocion(context, promoFin, nuevosDias);
+                          if (continuar) {
+                            DateTime nuevaFechaFin = promoFin.toDate().add(Duration(days: nuevosDias));
+                            await _firestore.collection('servicios').doc(servicio['id']).update({
+                              'promocionFin': Timestamp.fromDate(nuevaFechaFin),
+                            });
+                            _mostrarMensaje('¡Promoción extendida hasta el ${nuevaFechaFin.day}/${nuevaFechaFin.month}/${nuevaFechaFin.year}!');
+                            _cargarServicios();
+                          }
+                        } else {
+                          // No está promocionando, ir al flujo normal
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => PromocionarServicioPage(servicio: servicio),
+                            ),
+                          ).then((_) {
+                            _cargarServicios();
+                          });
+                        }
                       },
                       icon: Icon(Icons.campaign, size: 18),
                       label: Text('Promocionar'),
