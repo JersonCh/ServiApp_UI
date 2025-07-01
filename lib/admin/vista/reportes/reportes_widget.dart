@@ -165,7 +165,7 @@ class _ReportesWidgetState extends State<ReportesWidget> {
                                 child: PieChart(
                                   PieChartData(
                                     sections: _crearSeccionesPieUsuarios(usuarios),
-                                    centerSpaceRadius: 50,
+                                    centerSpaceRadius: 30,
                                     sectionsSpace: 2,
                                   ),
                                 ),
@@ -191,7 +191,7 @@ class _ReportesWidgetState extends State<ReportesWidget> {
                                   child: PieChart(
                                     PieChartData(
                                       sections: _crearSeccionesPieUsuarios(usuarios),
-                                      centerSpaceRadius: 60,
+                                      centerSpaceRadius: 40,
                                       sectionsSpace: 2,
                                     ),
                                   ),
@@ -239,7 +239,7 @@ class _ReportesWidgetState extends State<ReportesWidget> {
                       child: PieChart(
                         PieChartData(
                           sections: _crearSeccionesPieNotificaciones(notificaciones),
-                          centerSpaceRadius: 60,
+                          centerSpaceRadius: 40,
                           sectionsSpace: 3,
                         ),
                       ),
@@ -299,57 +299,86 @@ class _ReportesWidgetState extends State<ReportesWidget> {
                   children: [
                     Text('Servicios por Categoría', style: AdminTheme.titleMedium),
                     SizedBox(height: AdminTheme.spacing),
-                    SizedBox(
-                      height: 300,
-                      child: porCategoria.isEmpty
-                          ? Center(child: Text('No hay datos disponibles', style: AdminTheme.bodyMedium))
-                          : BarChart(
-                              BarChartData(
-                                alignment: BarChartAlignment.spaceAround,
-                                maxY: (porCategoria.values.isEmpty ? 10 : porCategoria.values.reduce((a, b) => a > b ? a : b)).toDouble() * 1.2,
-                                titlesData: FlTitlesData(
-                                  show: true,
-                                  bottomTitles: AxisTitles(
-                                    sideTitles: SideTitles(
-                                      showTitles: true,
-                                      getTitlesWidget: (double value, TitleMeta meta) {
-                                        final categorias = porCategoria.keys.toList();
-                                        if (value.toInt() < categorias.length) {
-                                          final categoria = categorias[value.toInt()];
-                                          return Padding(
-                                            padding: EdgeInsets.only(top: 8),
-                                            child: Text(
-                                              categoria.length > 8 ? '${categoria.substring(0, 8)}...' : categoria,
+                    
+                    // Contenedor principal con gráfico y leyenda
+                    porCategoria.isEmpty
+                        ? Container(
+                            height: 300,
+                            child: Center(child: Text('No hay datos disponibles', style: AdminTheme.bodyMedium)),
+                          )
+                        : Column(
+                            children: [
+                              // Gráfico de barras
+                              SizedBox(
+                                height: 250,
+                                child: BarChart(
+                                  BarChartData(
+                                    alignment: BarChartAlignment.spaceAround,
+                                    maxY: (porCategoria.values.isEmpty ? 10 : porCategoria.values.reduce((a, b) => a > b ? a : b)).toDouble() * 1.2,
+                                    titlesData: FlTitlesData(
+                                      show: true,
+                                      bottomTitles: AxisTitles(
+                                        sideTitles: SideTitles(
+                                          showTitles: true,
+                                          getTitlesWidget: (double value, TitleMeta meta) {
+                                            // Solo mostrar números de índice en lugar de nombres largos
+                                            return Padding(
+                                              padding: EdgeInsets.only(top: 8),
+                                              child: Text(
+                                                '${value.toInt() + 1}',
+                                                style: AdminTheme.captionText,
+                                                textAlign: TextAlign.center,
+                                              ),
+                                            );
+                                          },
+                                          reservedSize: 30,
+                                        ),
+                                      ),
+                                      leftTitles: AxisTitles(
+                                        sideTitles: SideTitles(
+                                          showTitles: true,
+                                          getTitlesWidget: (double value, TitleMeta meta) {
+                                            return Text(
+                                              value.toInt().toString(),
                                               style: AdminTheme.captionText,
-                                              textAlign: TextAlign.center,
-                                            ),
-                                          );
-                                        }
-                                        return Text('');
-                                      },
-                                      reservedSize: 40,
+                                            );
+                                          },
+                                          reservedSize: 40,
+                                        ),
+                                      ),
+                                      topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
+                                      rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
                                     ),
+                                    borderData: FlBorderData(show: false),
+                                    barGroups: _crearGruposBarrasConColores(porCategoria),
                                   ),
-                                  leftTitles: AxisTitles(
-                                    sideTitles: SideTitles(
-                                      showTitles: true,
-                                      getTitlesWidget: (double value, TitleMeta meta) {
-                                        return Text(
-                                          value.toInt().toString(),
-                                          style: AdminTheme.captionText,
-                                        );
-                                      },
-                                      reservedSize: 40,
-                                    ),
-                                  ),
-                                  topTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
-                                  rightTitles: AxisTitles(sideTitles: SideTitles(showTitles: false)),
                                 ),
-                                borderData: FlBorderData(show: false),
-                                barGroups: _crearGruposBarras(porCategoria),
                               ),
-                            ),
-                    ),
+                              
+                              SizedBox(height: AdminTheme.spacing),
+                              
+                              // Leyenda con colores
+                              Container(
+                                padding: EdgeInsets.all(AdminTheme.smallSpacing),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[50],
+                                  borderRadius: BorderRadius.circular(AdminTheme.smallBorderRadius),
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text('Leyenda:', style: AdminTheme.captionText.copyWith(fontWeight: FontWeight.bold)),
+                                    SizedBox(height: AdminTheme.smallSpacing),
+                                    Wrap(
+                                      spacing: AdminTheme.spacing,
+                                      runSpacing: AdminTheme.smallSpacing,
+                                      children: _crearLeyendaCategorias(porCategoria),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
                   ],
                 ),
               ),
@@ -733,114 +762,111 @@ class _ReportesWidgetState extends State<ReportesWidget> {
     );
   }
 
-  // Métodos auxiliares para gráficos
+  // Función para generar colores únicos para cada categoría
+  List<Color> _generarColoresUnicos(int cantidad) {
+    final colores = <Color>[
+      AdminTheme.primaryColor,
+      AdminTheme.secondaryColor,
+      AdminTheme.accentColor,
+      AdminTheme.successColor,
+      AdminTheme.warningColor,
+      AdminTheme.errorColor,
+      AdminTheme.infoColor,
+      const Color(0xFF9B59B6), // Púrpura
+      const Color(0xFFE67E22), // Naranja
+      const Color(0xFF1ABC9C), // Turquesa
+      const Color(0xFF34495E), // Azul grisáceo
+      const Color(0xFFE74C3C), // Rojo
+      const Color(0xFF2ECC71), // Verde
+      const Color(0xFFF39C12), // Amarillo
+      const Color(0xFF8E44AD), // Violeta
+    ];
+
+    if (cantidad <= colores.length) {
+      return colores.take(cantidad).toList();
+    }
+
+    // Si necesitamos más colores, generamos algunos adicionales
+    final coloresExtendidos = List<Color>.from(colores);
+    for (int i = colores.length; i < cantidad; i++) {
+      coloresExtendidos.add(Color((0xFF000000 + (i * 123456)) % 0xFFFFFFFF));
+    }
+    return coloresExtendidos.take(cantidad).toList();
+  }
+
+  // Crear secciones del gráfico de pie para usuarios
   List<PieChartSectionData> _crearSeccionesPieUsuarios(Map<String, dynamic> usuarios) {
     final clientes = usuarios['clientes'] ?? 0;
     final proveedores = usuarios['proveedores'] ?? 0;
     final total = clientes + proveedores;
-
-    if (total == 0) {
-      return [
-        PieChartSectionData(
-          color: Colors.grey,
-          value: 100,
-          title: 'Sin datos',
-          radius: 80,
-          titleStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
-        ),
-      ];
-    }
-
+    
+    if (total == 0) return [];
+    
     return [
       PieChartSectionData(
         color: AdminTheme.primaryColor,
         value: clientes.toDouble(),
         title: '${(clientes / total * 100).toStringAsFixed(1)}%',
-        radius: 80,
-        titleStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+        radius: 60,
+        titleStyle: AdminTheme.captionText.copyWith(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+        ),
       ),
       PieChartSectionData(
         color: AdminTheme.accentColor,
         value: proveedores.toDouble(),
         title: '${(proveedores / total * 100).toStringAsFixed(1)}%',
-        radius: 80,
-        titleStyle: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white),
+        radius: 60,
+        titleStyle: AdminTheme.captionText.copyWith(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     ];
   }
 
+  // Crear secciones del gráfico de pie para notificaciones
   List<PieChartSectionData> _crearSeccionesPieNotificaciones(Map<String, dynamic> notificaciones) {
     final pendientes = notificaciones['pendientes'] ?? 0;
     final aceptadas = notificaciones['aceptadas'] ?? 0;
     final rechazadas = notificaciones['rechazadas'] ?? 0;
     final total = pendientes + aceptadas + rechazadas;
-
-    if (total == 0) {
-      return [
-        PieChartSectionData(
-          color: Colors.grey,
-          value: 100,
-          title: 'Sin datos',
-          radius: 60,
-          titleStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
-        ),
-      ];
-    }
-
-    List<PieChartSectionData> sections = [];
     
-    if (pendientes > 0) {
-      sections.add(PieChartSectionData(
+    if (total == 0) return [];
+    
+    return [
+      PieChartSectionData(
         color: AdminTheme.warningColor,
         value: pendientes.toDouble(),
-        title: '${(pendientes / total * 100).toStringAsFixed(0)}%',
-        radius: 60,
-        titleStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
-      ));
-    }
-    
-    if (aceptadas > 0) {
-      sections.add(PieChartSectionData(
+        title: '${(pendientes / total * 100).toStringAsFixed(1)}%',
+        radius: 50,
+        titleStyle: AdminTheme.captionText.copyWith(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      PieChartSectionData(
         color: AdminTheme.successColor,
         value: aceptadas.toDouble(),
-        title: '${(aceptadas / total * 100).toStringAsFixed(0)}%',
-        radius: 60,
-        titleStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
-      ));
-    }
-    
-    if (rechazadas > 0) {
-      sections.add(PieChartSectionData(
+        title: '${(aceptadas / total * 100).toStringAsFixed(1)}%',
+        radius: 50,
+        titleStyle: AdminTheme.captionText.copyWith(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+      PieChartSectionData(
         color: AdminTheme.errorColor,
         value: rechazadas.toDouble(),
-        title: '${(rechazadas / total * 100).toStringAsFixed(0)}%',
-        radius: 60,
-        titleStyle: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.white),
-      ));
-    }
-
-    return sections;
-  }
-
-  List<BarChartGroupData> _crearGruposBarras(Map<String, dynamic> porCategoria) {
-    final categorias = porCategoria.keys.toList();
-    return categorias.asMap().entries.map((entry) {
-      final index = entry.key;
-      final categoria = entry.value;
-      final valor = porCategoria[categoria] ?? 0;
-      
-      return BarChartGroupData(
-        x: index,
-        barRods: [
-          BarChartRodData(
-            toY: valor.toDouble(),
-            color: AdminTheme.primaryColor,
-            width: 20,
-            borderRadius: BorderRadius.circular(4),
-          ),
-        ],
-      );
-    }).toList();
+        title: '${(rechazadas / total * 100).toStringAsFixed(1)}%',
+        radius: 50,
+        titleStyle: AdminTheme.captionText.copyWith(
+          color: Colors.white,
+          fontWeight: FontWeight.bold,
+        ),
+      ),
+    ];
   }
 
   Widget _buildLeyendaItemCompacta(String label, Color color, int valor) {
@@ -889,11 +915,81 @@ class _ReportesWidgetState extends State<ReportesWidget> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: AdminTheme.bodyMedium.copyWith(fontWeight: FontWeight.bold)),
+        Text(label, style: AdminTheme.bodyMedium),
         SizedBox(height: 4),
-        Text('$valor', style: AdminTheme.titleLarge.copyWith(color: AdminTheme.primaryColor)),
+        Text('$valor', style: AdminTheme.titleMedium),
       ],
     );
+  }
+
+  // Crear grupos de barras con colores únicos
+  List<BarChartGroupData> _crearGruposBarrasConColores(Map<String, dynamic> porCategoria) {
+    final categorias = porCategoria.keys.toList();
+    final colores = _generarColoresUnicos(categorias.length);
+    
+    return categorias.asMap().entries.map((entry) {
+      final index = entry.key;
+      final categoria = entry.value;
+      final valor = porCategoria[categoria] ?? 0;
+      
+      return BarChartGroupData(
+        x: index,
+        barRods: [
+          BarChartRodData(
+            toY: valor.toDouble(),
+            color: colores[index % colores.length],
+            width: 20,
+            borderRadius: BorderRadius.circular(4),
+          ),
+        ],
+      );
+    }).toList();
+  }
+
+  // Crear widgets de leyenda para las categorías
+  List<Widget> _crearLeyendaCategorias(Map<String, dynamic> porCategoria) {
+    final categorias = porCategoria.keys.toList();
+    final colores = _generarColoresUnicos(categorias.length);
+    
+    return categorias.asMap().entries.map((entry) {
+      final index = entry.key;
+      final categoria = entry.value;
+      final valor = porCategoria[categoria] ?? 0;
+      
+      return Container(
+        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(AdminTheme.smallBorderRadius),
+          border: Border.all(color: Colors.grey[300]!),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              '${index + 1}.',
+              style: AdminTheme.captionText.copyWith(fontWeight: FontWeight.bold),
+            ),
+            SizedBox(width: 4),
+            Container(
+              width: 12,
+              height: 12,
+              decoration: BoxDecoration(
+                color: colores[index % colores.length],
+                shape: BoxShape.circle,
+              ),
+            ),
+            SizedBox(width: 6),
+            Flexible(
+              child: Text(
+                '$categoria ($valor)',
+                style: AdminTheme.captionText,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+          ],
+        ),
+      );
+    }).toList();
   }
 
   String _formatearTiempo(dynamic timestamp) {
