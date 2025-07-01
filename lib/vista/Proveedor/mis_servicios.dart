@@ -202,14 +202,28 @@ class _MisServiciosPageState extends State<MisServiciosPage> {
 
   Future<void> _eliminarServicio(String servicioId, String titulo) async {
     bool? confirmar = await _mostrarDialogoConfirmacion(titulo);
-    
+
     if (confirmar == true) {
       try {
         await _firestore.collection('servicios').doc(servicioId).delete();
-        
+
+        // NUEVO: Descontar una publicación al usuario
+        String? userId = GlobalUser.uid;
+        if (userId != null) {
+          final userRef = _firestore.collection('users').doc(userId);
+          await _firestore.runTransaction((transaction) async {
+            final userSnap = await transaction.get(userRef);
+            int publicaciones = (userSnap.data()?['publicaciones'] ?? 0) as int;
+            // Evitar negativos
+            if (publicaciones > 0) {
+              transaction.update(userRef, {'publicaciones': publicaciones - 1});
+            }
+          });
+        }
+
         // Recargar la lista
         await _cargarServicios();
-        
+
         if (mounted) {
           _mostrarMensaje('Servicio eliminado correctamente');
         }
