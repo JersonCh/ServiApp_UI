@@ -16,6 +16,12 @@ import 'Services/servicios_generales_page.dart';
 import 'Services/misfavoritos.dart';
 import 'package:serviapp/vista/Services/todo.dart';
 import 'package:serviapp/vista/Usuario/historial_solicitudes.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:serviapp/app_theme2.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:uuid/uuid.dart';
+import 'dart:async';
 
 class HomePage extends StatefulWidget {
   @override
@@ -24,7 +30,6 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   final LoginController _loginController = LoginController();
-  final HomeController _homeController = HomeController();
   int _selectedIndex = 0;
 
   final List<Widget> _pages = [
@@ -299,8 +304,40 @@ List<String> obtenerSubcategorias(String categoria) {
   }
 }
 
-class _HomeContent extends StatelessWidget {
+class _HomeContent extends StatefulWidget {
+  @override
+  State<_HomeContent> createState() => _HomeContentState();
+}
+
+class _HomeContentState extends State<_HomeContent> {
   final HomeController _homeController = HomeController();
+  late PageController _pageController;
+  late Timer _timer;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController();
+    _startAutoSlide();
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  void _startAutoSlide() {
+    _timer = Timer.periodic(const Duration(seconds: 2), (timer) {
+      if (_pageController.hasClients) {
+        _pageController.nextPage(
+          duration: const Duration(milliseconds: 500),
+          curve: Curves.easeInOut,
+        );
+      }
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -309,9 +346,517 @@ class _HomeContent extends StatelessWidget {
 
     return ListView(
       children: [
+        _buildAdvertisementSlides(), // Nuevo widget de slides
         _buildCategoriesGrid(categorias, context),
         _buildPopularServices(servicios),
       ],
+    );
+  }
+
+  // Nuevo widget para los slides de anuncios
+  Widget _buildAdvertisementSlides() {
+    return Container(
+      height: 220,
+      margin: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: 12),
+            child: Text('Servicios Destacados', style: kTitleStyle),
+          ),
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream:
+                  FirebaseFirestore.instance
+                      .collection('servicios')
+                      .where('slide', isEqualTo: "true")
+                      .where('estado', isEqualTo: "true")
+                      .snapshots(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (snapshot.hasError) {
+                  return const Center(child: Text('Error al cargar anuncios'));
+                }
+
+                final slidesDocs = snapshot.data?.docs ?? [];
+                if (slidesDocs.isEmpty) {
+                  return Container(
+                    decoration: BoxDecoration(
+                      color: Colors.grey[100],
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: const Center(
+                      child: Text('No hay anuncios disponibles'),
+                    ),
+                  );
+                }
+
+                return PageView.builder(
+                  controller: _pageController,
+                  itemBuilder: (context, index) {
+                    final slideData =
+                        slidesDocs[index % slidesDocs.length].data()
+                            as Map<String, dynamic>;
+                    return _buildSlideCard(
+                      slideData,
+                      slidesDocs[index % slidesDocs.length].id,
+                    );
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSlideCard(Map<String, dynamic> servicioData, String servicioId) {
+    return FutureBuilder<DocumentSnapshot>(
+      future:
+          FirebaseFirestore.instance
+              .collection('users')
+              .doc(servicioData['idusuario'])
+              .get(),
+      builder: (context, userSnapshot) {
+        if (!userSnapshot.hasData) {
+          return Container(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [Colors.blue[400]!, Colors.blue[600]!],
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+              ),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: const Center(
+              child: CircularProgressIndicator(color: Colors.white),
+            ),
+          );
+        }
+
+        final userData =
+            userSnapshot.data!.data() as Map<String, dynamic>? ?? {};
+        final proveedorNombre = userData['nombre'] ?? 'Proveedor';
+
+        return Container(
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          decoration: BoxDecoration(
+            gradient: LinearGradient(
+              colors: [Colors.blue[400]!, Colors.purple[400]!],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+            ),
+            borderRadius: BorderRadius.circular(16),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.1),
+                blurRadius: 10,
+                offset: const Offset(0, 5),
+              ),
+            ],
+          ),
+          child: Stack(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Row(
+                      children: [
+                        Icon(Icons.campaign, color: Colors.white, size: 24),
+                        const SizedBox(width: 8),
+                        Text(
+                          'DESTACADO',
+                          style: TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1,
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      servicioData['titulo'] ?? 'Servicio',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Por: $proveedorNombre',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.9),
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      servicioData['descripcion'] ?? 'Sin descripción',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.8),
+                        fontSize: 12,
+                      ),
+                      maxLines: 2,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ],
+                ),
+              ),
+              Positioned(
+                bottom: 16,
+                right: 16,
+                child: ElevatedButton(
+                  onPressed:
+                      () => _mostrarDetalleServicio(
+                        servicioData,
+                        servicioId,
+                        proveedorNombre,
+                      ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.white,
+                    foregroundColor: Colors.blue[600],
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 8,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                  ),
+                  child: const Text(
+                    'Ver más',
+                    style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Future<bool> _crearSolicitudAceptadaDesdeServicio(String servicioId) async {
+    try {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        print('⚠️ Usuario no autenticado');
+        return false;
+      }
+
+      // Obtener datos del usuario actual
+      final userDoc =
+          await FirebaseFirestore.instance
+              .collection('users')
+              .doc(currentUser.uid)
+              .get();
+
+      if (!userDoc.exists) {
+        print('⚠️ Datos del usuario no encontrados');
+        return false;
+      }
+
+      final nombreCliente = userDoc.data()?['nombre'] ?? '';
+
+      // Obtener datos del servicio
+      final servicioDoc =
+          await FirebaseFirestore.instance
+              .collection('servicios')
+              .doc(servicioId)
+              .get();
+
+      if (!servicioDoc.exists) {
+        print('⚠️ El servicio con ID $servicioId no existe.');
+        return false;
+      }
+
+      final servicioData = servicioDoc.data()!;
+      final proveedorId = servicioData['idusuario'];
+      final subcategoria = servicioData['subcategoria'];
+
+      final uuid = Uuid();
+      final solicitudId = uuid.v4();
+
+      // Crear la notificación/solicitud aceptada
+      await FirebaseFirestore.instance
+          .collection('notificaciones')
+          .doc(solicitudId)
+          .set({
+            'id': solicitudId,
+            'clienteId': currentUser.uid,
+            'nombreCliente': nombreCliente,
+            'proveedorId': proveedorId,
+            'estado': 'aceptado',
+            'etapa': '',
+            'subcategoria': subcategoria,
+            'timestamp': FieldValue.serverTimestamp(),
+          });
+
+      print('✅ Solicitud creada desde slide destacado: $servicioId');
+      return true;
+    } catch (e) {
+      print('❌ Error al crear la solicitud: $e');
+      return false;
+    }
+  }
+
+  void _mostrarDetalleServicio(
+    Map<String, dynamic> servicioData,
+    String servicioId,
+    String proveedorNombre,
+  ) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (context) {
+        return DraggableScrollableSheet(
+          initialChildSize: 0.7,
+          minChildSize: 0.5,
+          maxChildSize: 0.9,
+          builder: (context, scrollController) {
+            return Container(
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+              ),
+              child: Column(
+                children: [
+                  Container(
+                    margin: const EdgeInsets.only(top: 8),
+                    width: 40,
+                    height: 4,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[300],
+                      borderRadius: BorderRadius.circular(2),
+                    ),
+                  ),
+                  Expanded(
+                    child: SingleChildScrollView(
+                      controller: scrollController,
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          // Header del servicio
+                          Row(
+                            children: [
+                              Container(
+                                width: 60,
+                                height: 60,
+                                decoration: BoxDecoration(
+                                  gradient: LinearGradient(
+                                    colors: [
+                                      Colors.blue[400]!,
+                                      Colors.purple[400]!,
+                                    ],
+                                  ),
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: const Icon(
+                                  Icons.star,
+                                  color: Colors.white,
+                                  size: 30,
+                                ),
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      servicioData['titulo'] ?? 'Servicio',
+                                      style: const TextStyle(
+                                        fontSize: 20,
+                                        fontWeight: FontWeight.bold,
+                                        color: ServiceAppTheme.primaryTextColor,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Proveedor: $proveedorNombre',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey[600],
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 20),
+
+                          // Información del servicio
+                          _buildInfoSection(
+                            'Categoría',
+                            servicioData['subcategoria'] ?? 'General',
+                          ),
+                          _buildInfoSection(
+                            'Descripción',
+                            servicioData['descripcion'] ?? 'Sin descripción',
+                          ),
+
+                          const SizedBox(height: 20),
+
+                          // Botones de acción
+                          ServiceAppWidgets.buildActionButtonsRow(
+                            onCallPressed: () async {
+                              try {
+                                // Mostrar indicador de carga
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Creando solicitud...'),
+                                    duration: Duration(seconds: 1),
+                                  ),
+                                );
+
+                                final success =
+                                    await _crearSolicitudAceptadaDesdeServicio(
+                                      servicioId,
+                                    );
+
+                                if (success) {
+                                  // Mostrar confirmación
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        '✅ Solicitud creada. Iniciando llamada...',
+                                      ),
+                                      backgroundColor: Colors.green,
+                                      duration: Duration(seconds: 2),
+                                    ),
+                                  );
+
+                                  // Realizar la llamada
+                                  final Uri uri = Uri(
+                                    scheme: 'tel',
+                                    path: servicioData['telefono'],
+                                  );
+                                  await launchUrl(uri);
+                                } else {
+                                  throw Exception(
+                                    'No se pudo crear la solicitud',
+                                  );
+                                }
+                              } catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      '❌ Error: No se pudo completar la acción',
+                                    ),
+                                    backgroundColor: Colors.red,
+                                    duration: Duration(seconds: 3),
+                                  ),
+                                );
+                              }
+                            },
+                            onWhatsAppPressed: () async {
+                              try {
+                                // Mostrar indicador de carga
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Creando solicitud...'),
+                                    duration: Duration(seconds: 1),
+                                  ),
+                                );
+
+                                final success =
+                                    await _crearSolicitudAceptadaDesdeServicio(
+                                      servicioId,
+                                    );
+
+                                if (success) {
+                                  // Mostrar confirmación
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        '✅ Solicitud creada. Abriendo WhatsApp...',
+                                      ),
+                                      backgroundColor: Colors.green,
+                                      duration: Duration(seconds: 2),
+                                    ),
+                                  );
+
+                                  // Abrir WhatsApp
+                                  final formatted = servicioData['telefono']
+                                      .replaceAll(RegExp(r'[^0-9]'), '');
+                                  final Uri uri = Uri.parse(
+                                    'https://wa.me/51$formatted',
+                                  );
+                                  await launchUrl(
+                                    uri,
+                                    mode: LaunchMode.externalApplication,
+                                  );
+                                } else {
+                                  throw Exception(
+                                    'No se pudo crear la solicitud',
+                                  );
+                                }
+                              } catch (e) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      '❌ Error: No se pudo completar la acción',
+                                    ),
+                                    backgroundColor: Colors.red,
+                                    duration: Duration(seconds: 3),
+                                  ),
+                                );
+                              }
+                            },
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  Widget _buildInfoSection(String title, String content) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: ServiceAppTheme.primaryTextColor,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            content,
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[700],
+              height: 1.4,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
