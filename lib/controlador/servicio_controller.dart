@@ -22,12 +22,44 @@ class ServicioController {
   }) async {
     try {
       final String? idUsuario = GlobalUser.uid;
-      
       if (idUsuario == null) {
         print('Error: No hay un usuario logueado');
         return false;
       }
 
+      // 1. Obtener datos del usuario (publicaciones y tokens)
+      final userRef = _firestore.collection('users').doc(idUsuario);
+      final userDoc = await userRef.get();
+
+      int publicaciones = 0;
+      int tokens = 0;
+
+      if (userDoc.exists) {
+        publicaciones = (userDoc.data()?['publicaciones'] ?? 0) as int;
+        tokens = (userDoc.data()?['tokens'] ?? 0) as int;
+      } else {
+        // Si el usuario no existe por alguna razón, lo inicializamos
+        await userRef.set({'publicaciones': 0, 'tokens': 0}, SetOptions(merge: true));
+      }
+
+      // 2. Lógica de cobro de tokens
+      int costoTokens = 50; // <-- AQUÍ defines el costo de la publicación extra
+      bool cobrar = publicaciones >= 2;
+
+      if (cobrar) {
+        if (tokens < costoTokens) {
+          // No tiene suficientes tokens
+          throw Exception('No tienes suficientes tokens para publicar un nuevo servicio. Elimina uno existente o recarga tokens.');
+        }
+      }
+
+      // 3. Subir imagen (si hay)
+      String? imagenUrl;
+      if (imagenFile != null) {
+        imagenUrl = await _subirImagen(imagenFile, idUsuario);
+      }
+
+      // 4. Crear el servicio
       Map<String, dynamic> servicioData = {
         'titulo': titulo,
         'descripcion': descripcion,
@@ -38,19 +70,23 @@ class ServicioController {
         'idusuario': idUsuario,
         'estado': 'true',
         'date': FieldValue.serverTimestamp(),
-        'sumaCalificaciones': 0,  // Nuevo campo inicializado en 0
-        'totalCalificaciones': 0, // Nuevo campo inicializado en 0
+        'sumaCalificaciones': 0,
+        'totalCalificaciones': 0,
+        if (imagenUrl != null) 'imagen': imagenUrl,
       };
 
-      if (imagenFile != null) {
-        servicioData['imagen'] = await _subirImagen(imagenFile, idUsuario);
-      }
-
       await _firestore.collection('servicios').add(servicioData);
+
+      // 5. Actualizar el contador de publicaciones y tokens
+      await userRef.set({
+        'publicaciones': publicaciones + 1,
+        if (cobrar) 'tokens': tokens - costoTokens,
+      }, SetOptions(merge: true));
+
       return true;
     } catch (e) {
       print('Error al registrar servicio: $e');
-      return false;
+      rethrow;
     }
   }
 

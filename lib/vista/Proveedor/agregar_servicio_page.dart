@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:serviapp/controlador/servicio_controller.dart';
 import 'package:serviapp/styles/Proveedor/agregar_servicio_styles.dart';
+import 'package:cloud_firestore/cloud_firestore.dart'; // <--- AÑADE ESTO
+import 'package:serviapp/modelo/global_user.dart';    // <--- Y ESTO
 
 class AgregarServicioPage extends StatefulWidget {
   @override
@@ -155,66 +157,121 @@ class _AgregarServicioPageState extends State<AgregarServicioPage> {
     return null;
   }
   
-  Future<void> _registrarServicio() async {
-    if (_formKey.currentState!.validate()) {
-      if (_categoriaSeleccionada == null || _subcategoriaSeleccionada == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Por favor selecciona categoría y subcategoría')),
-        );
-        return;
-      }
-      
-      // Verificar si se ha seleccionado una imagen
-      if (_imagenSeleccionada == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Por favor selecciona una imagen para el servicio')),
-        );
-        return;
-      }
-      
-      setState(() {
-        _cargando = true;
-      });
-      
-      try {
-        bool resultado = await _servicioController.registrarServicio(
-          titulo: _tituloController.text,
-          descripcion: _descripcionController.text,
-          categoria: _categoriaSeleccionada!,
-          subcategoria: _subcategoriaSeleccionada!,
-          telefono: _telefonoController.text,
-          ubicacion: _ubicacionController.text,
-          imagenFile: _imagenSeleccionada, // Pasar la imagen seleccionada
-        );
-        
-        setState(() {
-          _cargando = false;
-        });
-        
-        if (resultado) {
-          // Mostrar mensaje de éxito
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Servicio registrado exitosamente'),
-              backgroundColor: Colors.green,
+Future<void> _registrarServicio() async {
+  if (_formKey.currentState!.validate()) {
+    if (_categoriaSeleccionada == null || _subcategoriaSeleccionada == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Por favor selecciona categoría y subcategoría')),
+      );
+      return;
+    }
+    if (_imagenSeleccionada == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Por favor selecciona una imagen para el servicio')),
+      );
+      return;
+    }
+
+    setState(() {
+      _cargando = true;
+    });
+
+    // 1. Chequear publicaciones y tokens antes de registrar
+    try {
+      final usuarioId = GlobalUser.uid;
+      final userDoc = await FirebaseFirestore.instance.collection('users').doc(usuarioId).get();
+      int publicaciones = (userDoc.data()?['publicaciones'] ?? 0) as int;
+      int tokens = (userDoc.data()?['tokens'] ?? 0) as int;
+
+      if (publicaciones >= 2) {
+        // Mostrar advertencia y pedir confirmación
+        bool continuar = await showDialog<bool>(
+          context: context,
+          barrierDismissible: false,
+          builder: (ctx) => AlertDialog(
+            title: Text('¿Deseas continuar?'),
+            content: Text(
+              'Ya usaste tus 2 publicaciones gratuitas.\n'
+              'Para publicar un nuevo servicio se te descontarán 50 tokens.\n'
+              'Tokens actuales: $tokens\n\n'
+              '¿Deseas continuar?',
             ),
-          );
-          
-          // Volver a la pantalla anterior
-          Navigator.pop(context);
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Error al registrar el servicio'),
-              backgroundColor: Colors.red,
-            ),
-          );
+            actions: [
+              TextButton(
+                child: Text('Cancelar'),
+                onPressed: () => Navigator.of(ctx).pop(false),
+              ),
+              ElevatedButton(
+                child: Text('Sí, continuar'),
+                onPressed: () => Navigator.of(ctx).pop(true),
+              ),
+            ],
+          ),
+        ) ?? false;
+
+        if (!continuar) {
+          setState(() => _cargando = false);
+          return;
         }
-      } catch (e) {
-        setState(() {
-          _cargando = false;
-        });
-        
+      }
+
+      // Si no canceló, intenta registrar
+      bool resultado = await _servicioController.registrarServicio(
+        titulo: _tituloController.text,
+        descripcion: _descripcionController.text,
+        categoria: _categoriaSeleccionada!,
+        subcategoria: _subcategoriaSeleccionada!,
+        telefono: _telefonoController.text,
+        ubicacion: _ubicacionController.text,
+        imagenFile: _imagenSeleccionada,
+      );
+
+      setState(() {
+        _cargando = false;
+      });
+
+      if (resultado) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Servicio registrado exitosamente'),
+            backgroundColor: Colors.green,
+          ),
+        );
+        Navigator.pop(context);
+      }
+
+    } catch (e) {
+      setState(() {
+        _cargando = false;
+      });
+      final errorMsg = e.toString();
+      if (errorMsg.contains('No tienes suficientes tokens')) {
+        // Mensaje especial y opciones
+        showDialog(
+          context: context,
+          builder: (ctx) => AlertDialog(
+            title: Text('¡Tokens insuficientes!'),
+            content: Text(
+              'Ya usaste tus 2 publicaciones gratuitas. Para publicar uno nuevo debes pagar 50 tokens.\n\n'
+              'No tienes suficientes tokens. ¿Qué deseas hacer?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(ctx).pop(),
+                child: Text('Cancelar'),
+              ),
+              TextButton(
+                onPressed: () {
+                  Navigator.of(ctx).pop();
+                  // Aquí puedes llevarlo a la pantalla de recarga de tokens
+                  // Navigator.pushNamed(context, '/recargar_tokens');
+                },
+                child: Text('Recargar tokens'),
+              ),
+            ],
+          ),
+        );
+      } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text('Error: $e'),
@@ -224,6 +281,7 @@ class _AgregarServicioPageState extends State<AgregarServicioPage> {
       }
     }
   }
+}
   
   @override
   Widget build(BuildContext context) {
