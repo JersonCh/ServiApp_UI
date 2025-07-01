@@ -3,9 +3,8 @@ import '../styles/admin_theme.dart';
 import 'dashboard/dashboard_widget.dart';
 import 'usuarios/usuarios_widget.dart';
 import 'servicios/servicios_widget.dart';
-import 'solicitudes/solicitudes_widget.dart';
+// import 'solicitudes/solicitudes_widget.dart'; // OCULTO
 import 'reportes/reportes_widget.dart';
-import 'calificaciones_page.dart';
 import 'reportes_publicaciones/reportes_publicaciones_widget.dart';
 import '../../controlador/login_controller.dart';
 
@@ -115,10 +114,9 @@ class _AdminHomePageState extends State<AdminHomePage> {
                 _buildNavItem(0, Icons.dashboard, 'Dashboard'),
                 _buildNavItem(1, Icons.people, 'Usuarios'),
                 _buildNavItem(2, Icons.build, 'Servicios'),
-                _buildNavItem(3, Icons.notifications, 'Solicitudes'),
-                _buildNavItem(4, Icons.star, 'Calificaciones'),
-                _buildNavItem(5, Icons.analytics, 'Reportes'),
-                _buildNavItem(6, Icons.flag, 'Reportes Publicaciones'),
+                // _buildNavItem(3, Icons.notifications, 'Solicitudes'), // OCULTO
+                _buildNavItem(3, Icons.analytics, 'Reportes'),
+                _buildNavItem(4, Icons.flag, 'Reportes Publicaciones'),
               ],
             ),
           ),
@@ -213,10 +211,9 @@ class _AdminHomePageState extends State<AdminHomePage> {
                   _buildMobileNavItem(0, Icons.dashboard, 'Dashboard'),
                   _buildMobileNavItem(1, Icons.people, 'Usuarios'),
                   _buildMobileNavItem(2, Icons.build, 'Servicios'),
-                  _buildMobileNavItem(3, Icons.notifications, 'Solicitudes'),
-                  _buildMobileNavItem(4, Icons.star, 'Calificaciones'),
-                  _buildMobileNavItem(5, Icons.analytics, 'Reportes'),
-                  _buildMobileNavItem(6, Icons.flag, 'Reportes Publicaciones'),
+                  // _buildMobileNavItem(3, Icons.notifications, 'Solicitudes'), // OCULTO
+                  _buildMobileNavItem(3, Icons.analytics, 'Reportes'),
+                  _buildMobileNavItem(4, Icons.flag, 'Reportes Publicaciones'),
                 ],
               ),
             ),
@@ -281,13 +278,10 @@ class _AdminHomePageState extends State<AdminHomePage> {
         return UsuariosWidget();
       case 2:
         return ServiciosWidget();
+      // case 3: return SolicitudesWidget(); // OCULTO
       case 3:
-        return SolicitudesWidget();
-      case 4:
-        return CalificacionesPage();
-      case 5:
         return ReportesWidget();
-      case 6:
+      case 4:
         return ReportesPublicacionesWidget();
       default:
         return DashboardWidget();

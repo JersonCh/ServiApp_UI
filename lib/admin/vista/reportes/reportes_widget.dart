@@ -382,10 +382,6 @@ class _ReportesWidgetState extends State<ReportesWidget> {
                   ],
                 ),
               ),
-              SizedBox(height: AdminTheme.spacing),
-
-              // Top servicios populares
-              _buildServiciosPopulares(),
             ],
           );
         },
@@ -501,85 +497,6 @@ class _ReportesWidgetState extends State<ReportesWidget> {
           const SizedBox(height: AdminTheme.spacing),
           Text(value, style: AdminTheme.titleLarge.copyWith(color: color)),
           Text(title, style: AdminTheme.bodyMedium),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildServiciosPopulares() {
-    return Container(
-      padding: EdgeInsets.all(AdminTheme.spacing),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(AdminTheme.borderRadius),
-        boxShadow: AdminTheme.cardShadow,
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text('Servicios Populares', style: AdminTheme.titleMedium),
-          SizedBox(height: AdminTheme.spacing),
-          FutureBuilder<List<Map<String, dynamic>>>(
-            future: _adminController.obtenerServiciosPopulares(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return Center(child: CircularProgressIndicator());
-              }
-
-              if (snapshot.hasError || !snapshot.hasData || snapshot.data!.isEmpty) {
-                return Container(
-                  padding: EdgeInsets.all(AdminTheme.spacing),
-                  child: Column(
-                    children: [
-                      Icon(Icons.star_border, size: 48, color: Colors.grey),
-                      SizedBox(height: AdminTheme.smallSpacing),
-                      Text('No hay servicios populares', style: AdminTheme.bodyMedium),
-                    ],
-                  ),
-                );
-              }
-
-              return Column(
-                children: snapshot.data!.take(5).map((servicio) => 
-                  Container(
-                    margin: EdgeInsets.only(bottom: AdminTheme.smallSpacing),
-                    padding: EdgeInsets.all(AdminTheme.smallSpacing),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[50],
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border(left: BorderSide(width: 4, color: AdminTheme.accentColor)),
-                    ),
-                    child: Row(
-                      children: [
-                        Icon(Icons.star, color: AdminTheme.accentColor, size: 20),
-                        SizedBox(width: AdminTheme.smallSpacing),
-                        Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(servicio['titulo'] ?? 'Sin título', 
-                                   style: AdminTheme.bodyMedium.copyWith(fontWeight: FontWeight.w600)),
-                              Text('${servicio['solicitudes'] ?? 0} solicitudes', 
-                                   style: AdminTheme.captionText),
-                            ],
-                          ),
-                        ),
-                        Container(
-                          padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: AdminTheme.accentColor.withOpacity(0.1),
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                          child: Text('${servicio['categoria'] ?? 'General'}', 
-                                     style: AdminTheme.captionText.copyWith(color: AdminTheme.accentColor)),
-                        ),
-                      ],
-                    ),
-                  )
-                ).toList(),
-              );
-            },
-          ),
         ],
       ),
     );
