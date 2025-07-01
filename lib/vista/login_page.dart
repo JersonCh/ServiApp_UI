@@ -22,6 +22,8 @@ class _LoginPageState extends State<LoginPage> {
 
     final result = await loginController.loginUser(email, password);
 
+    if (!mounted) return;
+
     if (result != null) {
       // Depuración - verifica el rol que está llegando
       print("ROL DEL USUARIO: ${result['rol']}");

@@ -28,6 +28,8 @@ class HomePage extends StatefulWidget {
   State<HomePage> createState() => _HomePageState();
 }
 
+
+
 class _HomePageState extends State<HomePage> {
   final LoginController _loginController = LoginController();
   int _selectedIndex = 0;
@@ -317,8 +319,37 @@ class _HomeContentState extends State<_HomeContent> {
   @override
   void initState() {
     super.initState();
+    _verificarPromocionesVencidas();
     _pageController = PageController();
     _startAutoSlide();
+  }
+
+  Future<void> _verificarPromocionesVencidas() async {
+    final now = DateTime.now();
+    // Trae todos los servicios promocionados activos
+    final snap = await FirebaseFirestore.instance
+        .collection('servicios')
+        .where('slide', isEqualTo: 'true')
+        .get();
+
+    for (final doc in snap.docs) {
+      final data = doc.data();
+      final promocionFin = data['promocionFin'];
+      if (promocionFin != null && promocionFin is Timestamp) {
+        if (promocionFin.toDate().isBefore(now)) {
+          await FirebaseFirestore.instance
+              .collection('servicios')
+              .doc(doc.id)
+              .update({
+            'slide': 'false',
+            'promocionInicio': FieldValue.delete(),
+            'promocionFin': FieldValue.delete(),
+            'promocionTipo': FieldValue.delete(),
+            'promocionTokensUsados': FieldValue.delete(),
+          });
+        }
+      }
+    }
   }
 
   @override

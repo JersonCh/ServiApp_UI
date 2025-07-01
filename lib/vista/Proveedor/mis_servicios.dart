@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:serviapp/modelo/global_user.dart';
 import 'editar_servicio_page.dart';
+import 'package:serviapp/vista/Proveedor/promocionar_servicio_page.dart'; // Importa tu nuevo PaymentScreen
 
 class MisServiciosPage extends StatefulWidget {
   const MisServiciosPage({Key? key}) : super(key: key);
@@ -376,7 +377,50 @@ class _MisServiciosPageState extends State<MisServiciosPage> {
     );
   }
 
+  Widget _buildPromocionBadge(Timestamp? promoFin) {
+    String fechaFin = '';
+    if (promoFin != null) {
+      final fecha = promoFin.toDate();
+      fechaFin = 'Hasta: ${fecha.day}/${fecha.month}/${fecha.year}';
+    }
+    return Container(
+      padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      margin: EdgeInsets.only(bottom: 10),
+      decoration: BoxDecoration(
+        color: Colors.amber[100],
+        borderRadius: BorderRadius.circular(10),
+        border: Border.all(color: Colors.amber[700]!),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.campaign, size: 18, color: Colors.amber[900]),
+          SizedBox(width: 6),
+          Text(
+            'Promocionando',
+            style: TextStyle(
+              color: Colors.amber[900],
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          if (fechaFin.isNotEmpty) ...[
+            SizedBox(width: 12),
+            Text(
+              fechaFin,
+              style: TextStyle(
+                color: Colors.amber[900],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
   Widget _buildServicioCard(Map<String, dynamic> servicio) {
+    final bool promocionando = (servicio['slide'] ?? 'false') == 'true';
+    final Timestamp? promoFin = servicio['promocionFin'] as Timestamp?;
     return Card(
       margin: EdgeInsets.only(bottom: 16),
       elevation: 2,
@@ -489,51 +533,79 @@ class _MisServiciosPageState extends State<MisServiciosPage> {
                   ),
                 
                 SizedBox(height: 16),
+                if (promocionando)
+                  _buildPromocionBadge(promoFin),
                 
                 // Botones de acción
-                Row(
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () {
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => EditarServicioPage(servicio: servicio),
-                            ),
-                          ).then((_) {
-                            // Recargar la lista cuando regrese de editar
-                            _cargarServicios();
-                          });
-                        },
-                        icon: Icon(Icons.edit, size: 18),
-                        label: Text('Editar'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.blue,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => PromocionarServicioPage(servicio: servicio),
                           ),
+                        ).then((_) {
+                          _cargarServicios(); // recarga lista al volver de promocionar
+                        });
+                      },
+                      icon: Icon(Icons.campaign, size: 18),
+                      label: Text('Promocionar'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.amber[800],
+                        foregroundColor: Colors.white,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(8),
                         ),
                       ),
                     ),
-                    SizedBox(width: 12),
-                    Expanded(
-                      child: ElevatedButton.icon(
-                        onPressed: () => _eliminarServicio(
-                          servicio['id'],
-                          servicio['titulo']?.toString() ?? 'Sin título',
-                        ),
-                        icon: Icon(Icons.delete, size: 18),
-                        label: Text('Eliminar'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                          foregroundColor: Colors.white,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(8),
+                    const SizedBox(height: 8), // Espacio entre botones
+                    Row(
+                      children: [
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) => EditarServicioPage(servicio: servicio),
+                                ),
+                              ).then((_) {
+                                _cargarServicios();
+                              });
+                            },
+                            icon: Icon(Icons.edit, size: 18),
+                            label: Text('Editar'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.blue,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
                           ),
                         ),
-                      ),
+                        SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton.icon(
+                            onPressed: () => _eliminarServicio(
+                              servicio['id'],
+                              servicio['titulo']?.toString() ?? 'Sin título',
+                            ),
+                            icon: Icon(Icons.delete, size: 18),
+                            label: Text('Eliminar'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.red,
+                              foregroundColor: Colors.white,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(8),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),

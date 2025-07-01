@@ -20,6 +20,7 @@ import 'package:serviapp/vista/Proveedor/solicitudes_prov_page.dart';
 import 'dart:async';
 import 'package:fl_chart/fl_chart.dart';
 import 'Proveedor/mis_servicios.dart';
+import 'Proveedor/recargar_tokens_page.dart';
 
 class HomeProveedorPage extends StatefulWidget {
   @override
@@ -38,6 +39,34 @@ class _HomeProveedorPageState extends State<HomeProveedorPage> {
   final String? proveedorIdActual = GlobalUser.uid;
   bool _dialogShowing = false;
   String? _currentSolicitudId;
+
+  Future<void> _verificarPromocionesVencidas() async {
+    final now = DateTime.now();
+    final snap = await FirebaseFirestore.instance
+        .collection('servicios')
+        .where('slide', isEqualTo: 'true')
+        .where('idusuario', isEqualTo: proveedorIdActual) // Solo tus servicios
+        .get();
+
+    for (final doc in snap.docs) {
+      final data = doc.data();
+      final promocionFin = data['promocionFin'];
+      if (promocionFin != null && promocionFin is Timestamp) {
+        if (promocionFin.toDate().isBefore(now)) {
+          await FirebaseFirestore.instance
+              .collection('servicios')
+              .doc(doc.id)
+              .update({
+            'slide': 'false',
+            'promocionInicio': FieldValue.delete(),
+            'promocionFin': FieldValue.delete(),
+            'promocionTipo': FieldValue.delete(),
+            'promocionTokensUsados': FieldValue.delete(),
+          });
+        }
+      }
+    }
+  }
 
   void logout(BuildContext context) async {
     await loginController.logout();
@@ -917,6 +946,9 @@ Widget _buildCalificacionCard(QueryDocumentSnapshot calificacionDoc, int index) 
   @override
   void initState() {
     super.initState();
+    if (proveedorIdActual != null) {
+      _verificarPromocionesVencidas();
+    }
 
     if (proveedorIdActual != null) {
       _solicitudesSubscription = FirebaseFirestore.instance
@@ -946,6 +978,48 @@ Widget _buildCalificacionCard(QueryDocumentSnapshot calificacionDoc, int index) 
     _solicitudesSubscription?.cancel();
     super.dispose();
   }
+  
+  Widget _buildTokensInfo(BuildContext context) {
+    return StreamBuilder<DocumentSnapshot>(
+      stream: FirebaseFirestore.instance
+          .collection('users')
+          .doc(proveedorIdActual)
+          .snapshots(),
+      builder: (context, snapshot) {
+        int tokens = 0; // Declarado aquí, no dentro del if
+        if (snapshot.hasData && snapshot.data!.exists) {
+          final data = snapshot.data!.data() as Map<String, dynamic>?;
+          final tokensValue = data?['tokens'];
+          tokens = (tokensValue is int) ? tokensValue : 0;
+        }
+        return Row(
+          children: [
+            Icon(Icons.monetization_on, color: Colors.amber[700], size: 26),
+            SizedBox(width: 4),
+            Text(
+              tokens.toString(),
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.amber[900],
+                fontSize: 18,
+                letterSpacing: 1.2,
+              ),
+            ),
+            IconButton(
+              icon: Icon(Icons.add_circle_outline, color: Colors.blue, size: 26),
+              tooltip: "Recargar tokens",
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(builder: (_) => RecargarTokensPage()),
+                );
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -967,6 +1041,7 @@ Widget _buildCalificacionCard(QueryDocumentSnapshot calificacionDoc, int index) 
       appBar: AppBar(
         title: Text('Portal Proveedor'),
         actions: [
+          _buildTokensInfo(context),
           IconButton(
             icon: Icon(Icons.logout),
             onPressed: () => logout(context),

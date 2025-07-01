@@ -32,6 +32,7 @@ class UsuarioController {
         if (usuario.rol == 'proveedor') {
           userData['tipoTrabajo'] = usuario.tipoTrabajo ?? '';
           userData['experiencia'] = usuario.experiencia ?? '';
+          userData['tokens'] = 0;
         }
 
         await _firestore.collection('users').doc(user.uid).set(userData);
